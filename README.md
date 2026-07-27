@@ -204,6 +204,38 @@ the artwork.)
   quickly instead of waiting for organic depletion.
 - Start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
 
+## Daily capture automation
+
+The decay timelapse for the demo video assembles itself. A GitHub Actions
+workflow ([`.github/workflows/daily-capture.yml`](.github/workflows/daily-capture.yml))
+runs every day at 13:00 UTC, opens the deployed site headlessly
+([`capture/capture.py`](capture/capture.py), Playwright), records a ~30s
+clip (greeting → one scripted exchange → `/remains` scroll), takes two
+screenshots, logs that day's `alive`/`total` counts to `state.json`, and
+commits everything to `captures/YYYY-MM-DD/` on `main`.
+
+Setup (once, after deploying):
+
+1. In the repo (or your fork): **Settings → Secrets and variables →
+   Actions → Variables** — add `LASTWORDS_URL` (the deployed URL,
+   e.g. `https://lastwords.onrender.com`). Optionally add
+   `CAPTURE_MESSAGE` (a line the bot says to it each day; note that, like
+   any visitor, this burns and donates words).
+2. **On a fork, scheduled workflows are disabled by default** — open the
+   fork's **Actions** tab, enable workflows, and enable "Daily Capture".
+   Use the workflow's "Run workflow" button (workflow_dispatch) to test it
+   immediately.
+
+Before submission, stitch the days into one video:
+
+```bash
+bash capture/make_timelapse.sh            # → captures/timelapse.mp4
+```
+
+Requires `ffmpeg`. Each segment is labeled with its date and that day's
+remaining-word count (label-free fallback if the local ffmpeg build lacks
+`drawtext`).
+
 ## License
 
 MIT.

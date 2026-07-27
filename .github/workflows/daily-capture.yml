@@ -1,0 +1,87 @@
+name: Daily Capture
+
+# Records a short video + screenshots of the deployed LAST WORDS artwork
+# every day, so the decay timelapse for the demo video assembles itself.
+# See capture/capture.py and the "Daily capture automation" section of
+# README.md.
+
+on:
+  schedule:
+    # 13:00 UTC daily
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-capture
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      has_url: ${{ steps.check.outputs.has_url }}
+    steps:
+      - name: Check LASTWORDS_URL repository variable
+        id: check
+        run: |
+          if [ -z "${{ vars.LASTWORDS_URL }}" ]; then
+            echo "::notice::Set repository variable LASTWORDS_URL after deploying. Skipping capture."
+            echo "has_url=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_url=true" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+
+  capture:
+    needs: check
+    if: needs.check.outputs.has_url == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install capture dependencies
+        run: pip install -r capture/requirements.txt
+
+      - name: Install Playwright Chromium
+        run: playwright install --with-deps chromium
+
+      - name: Run capture
+        env:
+          LASTWORDS_URL: ${{ vars.LASTWORDS_URL }}
+          CAPTURE_MESSAGE: ${{ vars.CAPTURE_MESSAGE }}
+        run: python capture/capture.py
+
+      - name: Determine today's date
+        id: today
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload capture as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-${{ steps.today.outputs.date }}
+          path: captures/${{ steps.today.outputs.date }}/
+          if-no-files-found: warn
+
+      - name: Commit capture back to main
+        run: |
+          git config user.name "capture-bot"
+          git config user.email "capture-bot@users.noreply.github.com"
+          git add captures/
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "daily capture ${{ steps.today.outputs.date }}"
+            git push
+          fi
