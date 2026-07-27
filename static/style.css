@@ -1,0 +1,494 @@
+/* LAST WORDS — an elegy, not a dashboard. */
+
+:root {
+  --bg: #0d0c0a;
+  --bg-raised: #131210;
+  --text: #ece6da;
+  --text-dim: #8a8377;
+  --text-dimmer: #55504a;
+  --ember: #ff6b35;
+  --ember-dim: #a84a26;
+  --green: #7fae7a;
+  --border: #262420;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono",
+    "Roboto Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------- topbar */
+
+.topbar {
+  padding: 2.5rem 2rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.counter {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.counter-sep {
+  color: var(--text-dim);
+  font-size: 1rem;
+}
+
+#alive-count.pulse {
+  color: var(--ember);
+  transition: color 1.2s ease;
+}
+
+/* --------------------------------------------------------------- layout */
+
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 0;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------- conversation */
+
+.conversation {
+  padding: 2.5rem 1.5rem 3rem;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  overflow-y: auto;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.msg.user { align-items: flex-end; }
+.msg.ai { align-items: flex-start; }
+
+.msg-line {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  max-width: 90%;
+}
+
+.msg.user .msg-line {
+  color: var(--text-dim);
+}
+
+.msg.ai .msg-line {
+  color: var(--text);
+}
+
+.word {
+  display: inline;
+}
+
+.word.burning {
+  color: var(--ember);
+  transition: color 2.2s ease 0.15s;
+}
+
+.redacted {
+  display: inline-block;
+  background: #2a1a12;
+  color: var(--ember-dim);
+  letter-spacing: 0.05em;
+  padding: 0 0.15em;
+  cursor: help;
+  border-radius: 1px;
+}
+
+.revive-line {
+  font-size: 0.78rem;
+  color: var(--green);
+  opacity: 0.85;
+}
+
+.revive-line .rw {
+  text-decoration: underline;
+  text-decoration-color: rgba(127, 174, 122, 0.35);
+  text-underline-offset: 3px;
+}
+
+.system-line {
+  font-size: 0.78rem;
+  color: var(--text-dimmer);
+  font-style: italic;
+  text-align: center;
+  align-self: center;
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 0.5em;
+  opacity: 0.6;
+  animation: blink 1s steps(2) infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* --------------------------------------------------------------- graveyard */
+
+.graveyard-panel {
+  border-left: 1px solid var(--border);
+  padding: 2rem 1.25rem;
+  overflow-y: auto;
+}
+
+@media (max-width: 860px) {
+  .graveyard-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+.graveyard-title {
+  margin: 0 0 1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  font-weight: 500;
+}
+
+.graveyard-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: 0.78rem;
+}
+
+.grave-entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--text-dimmer);
+  animation: fadein 0.6s ease;
+}
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.grave-word.burned {
+  text-decoration: line-through;
+  color: var(--text-dimmer);
+  opacity: 0.7;
+}
+
+.grave-word.ghost {
+  background: #2a1a12;
+  color: var(--ember-dim);
+  padding: 0 0.2em;
+}
+
+.grave-word.revived {
+  color: var(--green);
+  opacity: 0.9;
+}
+
+.grave-ts {
+  white-space: nowrap;
+  color: var(--text-dimmer);
+  opacity: 0.6;
+  font-size: 0.7rem;
+}
+
+/* --------------------------------------------------------------- composer */
+
+.composer {
+  border-top: 1px solid var(--border);
+  padding: 1.25rem 1.5rem 1.75rem;
+  background: var(--bg);
+}
+
+#message-form {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0.75rem;
+}
+
+#message-input {
+  flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  padding: 0.75rem 0.9rem;
+  outline: none;
+}
+
+#message-input::placeholder {
+  color: var(--text-dimmer);
+}
+
+#message-input:focus {
+  border-color: var(--text-dim);
+}
+
+#send-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+#send-button:hover {
+  border-color: var(--ember);
+  color: var(--ember);
+}
+
+#send-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.caption {
+  max-width: 640px;
+  margin: 0.75rem auto 0;
+  font-size: 0.7rem;
+  color: var(--text-dimmer);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------- overlay */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 12, 10, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1.5rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.overlay-card {
+  max-width: 460px;
+  text-align: center;
+}
+
+.overlay-card p {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--text);
+  margin: 0 0 1.25rem;
+}
+
+#intro-dismiss {
+  margin-top: 1rem;
+  background: transparent;
+  border: 1px solid var(--ember-dim);
+  color: var(--ember);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.65rem 1.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+#intro-dismiss:hover {
+  border-color: var(--ember);
+  background: rgba(255, 107, 53, 0.08);
+}
+
+/* --------------------------------------------------------------- scrollbars */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* ---------------------------------------------------------- nav / cross-links */
+
+.nav-link {
+  display: inline-block;
+  color: var(--text-dimmer);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--ember);
+}
+
+.topbar .nav-link {
+  position: absolute;
+  top: 1.75rem;
+  right: 2rem;
+}
+
+.remains-body .topbar .nav-link {
+  position: absolute;
+  top: 1.75rem;
+  left: 2rem;
+  right: auto;
+}
+
+.topbar {
+  position: relative;
+}
+
+/* -------------------------------------------------------- THE REMAINS page */
+
+.remains-subtitle {
+  margin: 0.5rem auto 1.25rem;
+  max-width: 520px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.remains-main {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.5rem 1.75rem 4rem;
+}
+
+.word-field {
+  font-size: 0.92rem;
+  line-height: 2.3;
+  color: var(--text);
+  word-spacing: 0.15em;
+}
+
+.word-field .rw {
+  display: inline;
+}
+
+.word-field .rw.alive {
+  color: var(--text);
+  opacity: 0.92;
+}
+
+.word-field .rw.bar {
+  display: inline-block;
+  height: 0.85em;
+  vertical-align: middle;
+  background: #1a1917;
+  border-radius: 1px;
+  margin: 0 0.05em;
+}
+
+.word-field .rw.bar-fading {
+  animation: bar-fade 2.2s ease forwards;
+}
+
+@keyframes bar-fade {
+  0% { background: var(--ember); }
+  100% { background: #1a1917; }
+}
+
+/* ---------------------------------------------------------------- final poem */
+
+.final-poem-block {
+  max-width: 640px;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+
+.final-poem-label {
+  margin: 0 0 1.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ember-dim);
+}
+
+.final-poem-text {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+  white-space: pre-wrap;
+}
+
+.final-poem-date {
+  font-size: 0.72rem;
+  color: var(--text-dimmer);
+  margin: 0;
+}
+
+/* --------------------------------------------------------- silenced (main) */
+
+.composer.silenced {
+  display: none;
+}
+
+.silence-block {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 2.5rem;
+  text-align: center;
+}

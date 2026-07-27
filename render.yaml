@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: lastwords
+    runtime: python
+    plan: starter # a persistent disk requires a paid instance; the vocabulary must survive restarts
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: lastwords-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: LASTWORDS_DB
+        value: /var/data/lastwords.db
+      - key: ANTHROPIC_API_KEY
+        sync: false # set this in the Render dashboard; without it the piece runs in mock mode
+      - key: LASTWORDS_END_THRESHOLD
+        value: "100"

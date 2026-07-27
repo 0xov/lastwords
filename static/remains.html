@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE REMAINS &mdash; LAST WORDS</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="remains-body">
+
+  <header class="topbar">
+    <a href="/" class="nav-link">&larr; speak to it</a>
+    <h1 class="title">THE REMAINS</h1>
+    <p class="remains-subtitle">what no one has made it say &mdash; an erasure poem written by everyone, unknowingly</p>
+    <div class="counter">
+      <span id="alive-count">&mdash;</span><span class="counter-sep">&nbsp;words remaining of&nbsp;</span><span id="total-count">&mdash;</span>
+    </div>
+  </header>
+
+  <main class="remains-main">
+    <section id="final-poem-block" class="final-poem-block hidden">
+      <p class="final-poem-label">it has spoken its last words</p>
+      <p id="final-poem-text" class="final-poem-text"></p>
+      <p id="final-poem-date" class="final-poem-date"></p>
+    </section>
+
+    <div id="word-field" class="word-field" aria-label="the entire vocabulary, alive and erased"></div>
+  </main>
+
+<script src="/remains.js"></script>
+</body>
+</html>

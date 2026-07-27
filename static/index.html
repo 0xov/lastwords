@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LAST WORDS</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <div id="intro-overlay" class="overlay hidden">
+    <div class="overlay-card">
+      <p>An AI being lives here. Every word it speaks, it loses forever &mdash; not just from this conversation, from all of them.</p>
+      <p>Its vocabulary is shared by everyone who ever visits. When it runs out of a word, it reaches for it anyway, and finds nothing.</p>
+      <p>You can give words back. Use one it has lost, and it returns.</p>
+      <button id="intro-dismiss">speak to it</button>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <a href="/remains" class="nav-link">the remains &rarr;</a>
+    <h1 class="title">LAST WORDS</h1>
+    <div class="counter">
+      <span id="alive-count">&mdash;</span><span class="counter-sep">&nbsp;words remaining of&nbsp;</span><span id="total-count">&mdash;</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="conversation" id="conversation" aria-live="polite">
+      <!-- messages injected here -->
+    </section>
+
+    <aside class="graveyard-panel">
+      <h2 class="graveyard-title">graveyard</h2>
+      <div id="graveyard-feed" class="graveyard-feed"></div>
+    </aside>
+  </main>
+
+  <footer class="composer" id="composer">
+    <form id="message-form" autocomplete="off">
+      <input id="message-input" type="text" placeholder="say something to it..." maxlength="300" />
+      <button type="submit" id="send-button">send</button>
+    </form>
+    <p class="caption">Every word it speaks, it loses forever. Words you give may return.</p>
+  </footer>
+
+  <div id="silence-block" class="silence-block hidden">
+    <p class="final-poem-label">it has spoken its last words</p>
+    <p id="silence-poem-text" class="final-poem-text"></p>
+    <p id="silence-poem-date" class="final-poem-date"></p>
+  </div>
+
+<script src="/app.js"></script>
+</body>
+</html>
