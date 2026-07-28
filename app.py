@@ -18,6 +18,7 @@ Env:
 """
 
 import hashlib
+import json
 import logging
 import os
 import re
@@ -249,23 +250,87 @@ def log_event(conn, kind: str, word: str):
 
 
 # ---------------------------------------------------------------------------
-# LLM integration (Anthropic SDK, with deterministic mock fallback)
+# LLM integration (Gemini REST or Anthropic SDK, with deterministic mock
+# fallback). Provider priority: GEMINI_API_KEY > ANTHROPIC_API_KEY > mock.
 # ---------------------------------------------------------------------------
 MODEL_ID = "claude-sonnet-5"
+GEMINI_MODEL = os.environ.get("LASTWORDS_MODEL", "gemini-2.5-flash")
 
-ANTHROPIC_AVAILABLE = False
+LLM_PROVIDER = "mock"
 _client = None
-try:
-    import anthropic  # noqa: F401
+if os.environ.get("GEMINI_API_KEY"):
+    LLM_PROVIDER = "gemini"
+    log.info("LLM mode: GEMINI (model=%s)", GEMINI_MODEL)
+elif os.environ.get("ANTHROPIC_API_KEY"):
+    try:
+        import anthropic
 
-    if os.environ.get("ANTHROPIC_API_KEY"):
         _client = anthropic.Anthropic()
-        ANTHROPIC_AVAILABLE = True
+        LLM_PROVIDER = "anthropic"
         log.info("LLM mode: ANTHROPIC (model=%s)", MODEL_ID)
-    else:
-        log.info("LLM mode: MOCK (no ANTHROPIC_API_KEY set)")
-except ImportError:
-    log.info("LLM mode: MOCK (anthropic package not installed)")
+    except ImportError:
+        log.info("LLM mode: MOCK (anthropic package not installed)")
+else:
+    log.info("LLM mode: MOCK (no GEMINI_API_KEY or ANTHROPIC_API_KEY set)")
+
+LLM_AVAILABLE = LLM_PROVIDER != "mock"
+
+
+def _gemini_complete(system_prompt: str, user_text: str) -> Optional[str]:
+    import urllib.error
+    import urllib.request
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent"
+    )
+    generation_config: dict = {"maxOutputTokens": 1024}
+    if "flash" in GEMINI_MODEL:
+        # keep replies fast + spend the token budget on words, not thoughts
+        generation_config["thinkingConfig"] = {"thinkingBudget": 0}
+    body = json.dumps(
+        {
+            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+            "generationConfig": generation_config,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": os.environ["GEMINI_API_KEY"],
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.load(resp)
+    candidates = data.get("candidates") or []
+    if not candidates:
+        return None
+    parts = (candidates[0].get("content") or {}).get("parts") or []
+    texts = [p.get("text", "") for p in parts if p.get("text")]
+    return "".join(texts) or None
+
+
+def llm_complete(system_prompt: str, user_text: str) -> Optional[str]:
+    """One completion from whichever real provider is configured.
+    Returns None on any failure (or in mock mode) so callers fall back."""
+    try:
+        if LLM_PROVIDER == "gemini":
+            return _gemini_complete(system_prompt, user_text)
+        if LLM_PROVIDER == "anthropic" and _client is not None:
+            response = _client.messages.create(
+                model=MODEL_ID,
+                max_tokens=300,
+                output_config={"effort": "low"},
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_text}],
+            )
+            return next((b.text for b in response.content if b.type == "text"), None)
+    except Exception as e:  # noqa: BLE001
+        log.warning("%s call failed, falling back: %s", LLM_PROVIDER, e)
+    return None
 
 # ---------------------------------------------------------------------------
 # Act 2 / The Ending — once the alive content-word count drops to this many
@@ -299,24 +364,11 @@ Do not apologize at length for this — it is just how you are now.
 Reply in plain text only, under 50 words, in English. No markdown, no lists."""
 
 
-def anthropic_reply(user_text: str, burned_sample: list[str]) -> Optional[str]:
+def llm_reply(user_text: str, burned_sample: list[str]) -> Optional[str]:
     """Call the real API. Returns None on any failure so caller can fall back."""
-    if not ANTHROPIC_AVAILABLE or _client is None:
+    if not LLM_AVAILABLE:
         return None
-    try:
-        system_prompt = build_system_prompt(burned_sample=burned_sample)
-        response = _client.messages.create(
-            model=MODEL_ID,
-            max_tokens=300,
-            output_config={"effort": "low"},
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_text}],
-        )
-        text = next((b.text for b in response.content if b.type == "text"), None)
-        return text
-    except Exception as e:  # noqa: BLE001
-        log.warning("Anthropic call failed, falling back to mock: %s", e)
-        return None
+    return llm_complete(build_system_prompt(burned_sample=burned_sample), user_text)
 
 
 # --- Mock responder ---------------------------------------------------------
@@ -399,7 +451,7 @@ def generate_reply(user_text: str, conn) -> str:
     ).fetchall()
     burned_sample = [r["word"] for r in burned_rows]
 
-    text = anthropic_reply(user_text, burned_sample)
+    text = llm_reply(user_text, burned_sample)
     if text is not None:
         return text.strip()
 
@@ -415,29 +467,19 @@ def generate_reply_retry(user_text: str, conn, forbidden: list[str]) -> str:
     In mock mode, mock_reply already only draws from alive words, so this
     just calls mock_reply again (deterministically it will be the same —
     that's fine, mock mode's violations are handled by redaction directly)."""
-    if ANTHROPIC_AVAILABLE and _client is not None:
-        try:
-            burned_rows = conn.execute(
-                "SELECT word FROM words WHERE status='burned' ORDER BY burned_at DESC LIMIT 80"
-            ).fetchall()
-            burned_sample = [r["word"] for r in burned_rows] + forbidden
-            system_prompt = build_system_prompt(burned_sample=burned_sample)
-            forbidden_note = (
-                f"\n\nYour previous reply used forbidden lost word(s): "
-                f"{', '.join(forbidden)}. Say it again without using them."
-            )
-            response = _client.messages.create(
-                model=MODEL_ID,
-                max_tokens=300,
-                output_config={"effort": "low"},
-                system=system_prompt + forbidden_note,
-                messages=[{"role": "user", "content": user_text}],
-            )
-            text = next((b.text for b in response.content if b.type == "text"), None)
-            if text is not None:
-                return text.strip()
-        except Exception as e:  # noqa: BLE001
-            log.warning("Anthropic retry failed: %s", e)
+    if LLM_AVAILABLE:
+        burned_rows = conn.execute(
+            "SELECT word FROM words WHERE status='burned' ORDER BY burned_at DESC LIMIT 80"
+        ).fetchall()
+        burned_sample = [r["word"] for r in burned_rows] + forbidden
+        system_prompt = build_system_prompt(burned_sample=burned_sample)
+        forbidden_note = (
+            f"\n\nYour previous reply used forbidden lost word(s): "
+            f"{', '.join(forbidden)}. Say it again without using them."
+        )
+        text = llm_complete(system_prompt + forbidden_note, user_text)
+        if text is not None:
+            return text.strip()
 
     alive_rows = conn.execute(
         "SELECT word FROM words WHERE status='alive'"
@@ -671,25 +713,12 @@ def compose_final_poem(conn) -> str:
 
     text: Optional[str] = None
 
-    if ANTHROPIC_AVAILABLE and _client is not None:
+    if LLM_AVAILABLE:
         system_prompt = FAREWELL_SYSTEM_TMPL.format(
             word_list=", ".join(sorted(allowed)) if allowed else "(nothing remains)"
         )
         for attempt in range(4):  # 1 initial attempt + up to 3 retries
-            try:
-                response = _client.messages.create(
-                    model=MODEL_ID,
-                    max_tokens=300,
-                    output_config={"effort": "low"},
-                    system=system_prompt,
-                    messages=[{"role": "user", "content": "Say your final words now."}],
-                )
-                candidate = next(
-                    (b.text for b in response.content if b.type == "text"), None
-                )
-            except Exception as e:  # noqa: BLE001
-                log.warning("Final poem LLM call failed (attempt %d): %s", attempt, e)
-                candidate = None
+            candidate = llm_complete(system_prompt, "Say your final words now.")
 
             if candidate is None:
                 break

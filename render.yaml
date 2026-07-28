@@ -12,7 +12,9 @@ services:
     envVars:
       - key: LASTWORDS_DB
         value: /var/data/lastwords.db
+      - key: GEMINI_API_KEY
+        sync: false # set this in the Render dashboard; without a key the piece runs in mock mode
       - key: ANTHROPIC_API_KEY
-        sync: false # set this in the Render dashboard; without it the piece runs in mock mode
+        sync: false # optional alternative provider (used only if GEMINI_API_KEY is unset)
       - key: LASTWORDS_END_THRESHOLD
         value: "100"
