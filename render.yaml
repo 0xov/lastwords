@@ -18,3 +18,7 @@ services:
         sync: false # optional alternative provider (used only if GEMINI_API_KEY is unset)
       - key: LASTWORDS_END_THRESHOLD
         value: "100"
+      - key: LASTWORDS_GLOBAL_MESSAGES_PER_MINUTE
+        value: "20"
+      - key: LASTWORDS_EDITION_REBIRTH_SECONDS
+        value: "12"

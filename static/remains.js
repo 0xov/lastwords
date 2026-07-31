@@ -7,7 +7,7 @@
 (() => {
   "use strict";
 
-  const POLL_MS = 10000;
+  const POLL_MS = 2500;
 
   const fieldEl = document.getElementById("word-field");
   const aliveCountEl = document.getElementById("alive-count");
@@ -15,6 +15,9 @@
   const poemBlock = document.getElementById("final-poem-block");
   const poemText = document.getElementById("final-poem-text");
   const poemDate = document.getElementById("final-poem-date");
+  const editionLabel = document.getElementById("remains-edition-label");
+  const archiveCount = document.getElementById("archive-count");
+  const archiveLedger = document.getElementById("archive-ledger");
 
   // word -> status, so we can detect transitions between polls
   let known = new Map();
@@ -62,6 +65,71 @@
     poemBlock.classList.remove("hidden");
     poemText.textContent = poem;
     poemDate.textContent = formatDate(silencedAt);
+  }
+
+  function shortLineage(seed) {
+    return String(seed || "00000000")
+      .replace(/[^a-f0-9]/gi, "")
+      .slice(0, 8)
+      .padEnd(8, "0")
+      .toUpperCase();
+  }
+
+  function renderArchive(current, editions) {
+    const safeEditions = Array.isArray(editions) ? editions : [];
+    if (editionLabel && current) {
+      editionLabel.textContent =
+        `${current.label || "WORLD 001"} · ${current.status === "silenced" ? "MOURNING" : "LIVING"}`;
+    }
+    archiveCount.textContent =
+      `${safeEditions.length.toLocaleString()} ${safeEditions.length === 1 ? "world" : "worlds"} buried`;
+    archiveLedger.replaceChildren();
+
+    if (safeEditions.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "archive-empty";
+      empty.textContent =
+        "The first world is still deciding how it will die.";
+      archiveLedger.appendChild(empty);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    safeEditions.forEach((edition) => {
+      const card = document.createElement("article");
+      card.className = "edition-card";
+
+      const heading = document.createElement("div");
+      heading.className = "edition-card-heading";
+      const title = document.createElement("h3");
+      title.className = "edition-card-title";
+      title.textContent = edition.label || `WORLD ${edition.number}`;
+      const status = document.createElement("span");
+      status.className = "edition-card-status";
+      status.textContent = "ARCHIVED / READ ONLY";
+      heading.append(title, status);
+
+      const poem = document.createElement("p");
+      poem.className = "edition-card-poem";
+      poem.textContent = edition.final_poem || "I am.";
+
+      const meta = document.createElement("p");
+      meta.className = "edition-card-meta";
+      const lawCount = Number(edition.world_version || 0);
+      const messages = Number(edition.message_count || 0);
+      const alive = Number(edition.alive_count || 0);
+      meta.textContent =
+        `${lawCount} laws removed · ${messages} questions · ${alive} words survived · closed ${formatDate(edition.died_at)}`;
+
+      const lineage = document.createElement("p");
+      lineage.className = "edition-card-lineage";
+      lineage.textContent =
+        `LINEAGE ${shortLineage(edition.lineage_seed)} · LAST LOSS ${String(edition.last_law || "unknown").toUpperCase()}`;
+
+      card.append(heading, poem, meta, lineage);
+      fragment.appendChild(card);
+    });
+    archiveLedger.appendChild(fragment);
   }
 
   function makeWordNode(word, status, justChanged) {
@@ -139,18 +207,21 @@
 
   async function poll() {
     try {
-      const [wordsRes, stateRes] = await Promise.all([
+      const [wordsRes, stateRes, editionsRes] = await Promise.all([
         fetch("/api/words"),
         fetch("/api/state"),
+        fetch("/api/editions"),
       ]);
       const words = await wordsRes.json();
       const state = await stateRes.json();
+      const editionData = await editionsRes.json();
 
       animateCountTo(aliveCountEl, currentAlive, state.alive);
       totalCountEl.textContent = state.total.toLocaleString();
       currentAlive = state.alive;
 
       renderPoem(state.silenced, state.poem, state.silenced_at);
+      renderArchive(editionData.current, editionData.editions);
 
       if (known.size === 0) {
         fullRender(words);

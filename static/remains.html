@@ -4,20 +4,34 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>THE REMAINS &mdash; LAST WORDS</title>
-<link rel="stylesheet" href="/style.css" />
+<link rel="stylesheet" href="/style.css?v=world-lineage-v6" />
 </head>
 <body class="remains-body">
 
   <header class="topbar">
     <a href="/" class="nav-link">&larr; speak to it</a>
     <h1 class="title">THE REMAINS</h1>
-    <p class="remains-subtitle">what no one has made it say &mdash; an erasure poem written by everyone, unknowingly</p>
     <div class="counter">
       <span id="alive-count">&mdash;</span><span class="counter-sep">&nbsp;words remaining of&nbsp;</span><span id="total-count">&mdash;</span>
     </div>
+    <p id="remains-edition-label" class="remains-edition-label">WORLD 001 · LIVING</p>
+    <p class="remains-subtitle">Every dead world stays. Every living word can still be spent.</p>
   </header>
 
   <main class="remains-main">
+    <section id="world-archive" class="world-archive" aria-labelledby="archive-title">
+      <div class="archive-heading">
+        <div>
+          <p class="archive-kicker">immutable editions</p>
+          <h2 id="archive-title">THE WORLDS THAT CANNOT BE RESTORED</h2>
+        </div>
+        <p id="archive-count" class="archive-count">0 worlds buried</p>
+      </div>
+      <div id="archive-ledger" class="archive-ledger">
+        <p class="archive-empty">The first world is still deciding how it will die.</p>
+      </div>
+    </section>
+
     <section id="final-poem-block" class="final-poem-block hidden">
       <p class="final-poem-label">it has spoken its last words</p>
       <p id="final-poem-text" class="final-poem-text"></p>
@@ -27,6 +41,6 @@
     <div id="word-field" class="word-field" aria-label="the entire vocabulary, alive and erased"></div>
   </main>
 
-<script src="/remains.js"></script>
+<script src="/remains.js?v=world-lineage-v6"></script>
 </body>
 </html>

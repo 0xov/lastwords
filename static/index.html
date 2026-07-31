@@ -3,53 +3,120 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LAST WORDS</title>
-<link rel="stylesheet" href="/style.css" />
+<title>LAST WORDS — A SELF-ERASING WORLD</title>
+<meta name="description" content="A shared AI artwork whose world loses a law every time a visitor asks it to speak." />
+<link rel="stylesheet" href="/style.css?v=world-lineage-v6" />
 </head>
-<body>
+<body class="art-body world-body">
 
-  <div id="intro-overlay" class="overlay hidden">
-    <div class="overlay-card">
-      <p>An AI being lives here. Every word it speaks, it loses forever &mdash; not just from this conversation, from all of them.</p>
-      <p>Its vocabulary is shared by everyone who ever visits. When it runs out of a word, it reaches for it anyway, and finds nothing.</p>
-      <p>You can give words back. Use one it has lost, and it returns.</p>
-      <button id="intro-dismiss">speak to it</button>
+  <header class="world-header">
+    <div class="world-heading">
+      <h1 class="title">LAST WORDS</h1>
+      <div class="counter" aria-label="Shared vocabulary remaining">
+        <span id="alive-count">&mdash;</span>
+        <span class="counter-divider">/</span>
+        <span id="total-count">&mdash;</span>
+        <span class="counter-label">words still alive</span>
+      </div>
+      <p class="world-instruction">Every living word carries a law. Sacrifice one; its physics disappears for everyone.</p>
+      <p class="live-proof">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="build-label">BUILD 0000</span>
+        <span class="proof-separator">&middot;</span>
+        <span>LIVE SHARED WORLD</span>
+      </p>
     </div>
-  </div>
-
-  <header class="topbar">
-    <a href="/remains" class="nav-link">the remains &rarr;</a>
-    <h1 class="title">LAST WORDS</h1>
-    <div class="counter">
-      <span id="alive-count">&mdash;</span><span class="counter-sep">&nbsp;words remaining of&nbsp;</span><span id="total-count">&mdash;</span>
+    <div class="world-accession" aria-label="Current world edition">
+      <span class="accession-kicker">current body</span>
+      <strong id="edition-label" class="edition-label">WORLD 001</strong>
+      <span id="lineage-label" class="lineage-label">ORIGIN · 00000000</span>
+      <a href="/remains#world-archive" id="archive-link" class="nav-link world-remains-link">archive / 0 &rarr;</a>
     </div>
   </header>
 
-  <main class="layout">
-    <section class="conversation" id="conversation" aria-live="polite">
-      <!-- messages injected here -->
-    </section>
+  <main class="world-shell">
+    <section class="world-stage" aria-labelledby="world-stage-label">
+      <h2 id="world-stage-label" class="sr-only">The living world</h2>
+      <canvas id="world-canvas" class="world-canvas" aria-hidden="true"></canvas>
+      <div id="lineage-scar" class="lineage-scar" aria-hidden="true"></div>
 
-    <aside class="graveyard-panel">
-      <h2 class="graveyard-title">graveyard</h2>
-      <div id="graveyard-feed" class="graveyard-feed"></div>
-    </aside>
+      <div class="mutation-epitaph" aria-live="polite">
+        <p id="mutation-title" class="mutation-title">THE WORLD IS STILL WHOLE</p>
+        <span class="epitaph-mark" aria-hidden="true"></span>
+        <p id="mutation-consequence" class="mutation-consequence">waiting for someone to choose its first absence</p>
+      </div>
+
+      <section class="whisper-stage" aria-labelledby="last-utterance-label">
+        <h2 id="last-utterance-label" class="stage-label">the world whispers</h2>
+        <div class="conversation" id="conversation">
+          <p id="waiting-line" class="waiting-line">It cannot answer until you decide what it must lose.</p>
+        </div>
+        <p id="event-status" class="event-status"></p>
+      </section>
+
+      <aside class="source-trace" aria-labelledby="source-title">
+        <div class="source-heading">
+          <h2 id="source-title">world.fs · actual</h2>
+          <span id="compile-status">AWAITING MUTATION</span>
+        </div>
+        <pre id="source-code" aria-label="Live shader source">// the world has not forgotten
+// a law yet
+
+float gravity = 1.0;
+float memory = 1.0;
+float attraction = 1.0;</pre>
+        <p id="compile-time" class="compile-time">the browser will rebuild it here</p>
+      </aside>
+
+      <aside class="graveyard-panel hidden" aria-labelledby="graveyard-label">
+        <h2 id="graveyard-label" class="graveyard-title">graveyard</h2>
+        <p id="graveyard-event" class="graveyard-event"></p>
+        <div id="graveyard-feed" class="graveyard-feed"></div>
+      </aside>
+    </section>
   </main>
 
-  <footer class="composer" id="composer">
+  <footer class="composer world-ritual" id="composer">
     <form id="message-form" autocomplete="off">
-      <input id="message-input" type="text" placeholder="say something to it..." maxlength="300" />
-      <button type="submit" id="send-button">send</button>
+      <fieldset class="sacrifice-fieldset">
+        <legend>Preview a loss. Choose one living word to erase its law for everyone.</legend>
+        <div id="sacrifice-options" class="sacrifice-options" aria-live="polite">
+          <p class="options-loading">reading the laws that remain&hellip;</p>
+        </div>
+      </fieldset>
+
+      <label class="ritual-question-label" for="message-input">What do you want to know?</label>
+      <div class="question-row">
+        <input id="message-input" type="text" placeholder="ask the world something..." maxlength="300" aria-describedby="composer-caption" />
+        <button type="submit" id="send-button" disabled>sacrifice &amp; ask</button>
+      </div>
     </form>
-    <p class="caption">Every word it speaks, it loses forever. Words you give may return.</p>
+    <p id="composer-caption" class="caption">Your choice changes this same world for every visitor.</p>
   </footer>
 
   <div id="silence-block" class="silence-block hidden">
+    <p id="closed-edition-label" class="closed-edition-label">WORLD 001 / CLOSED</p>
     <p class="final-poem-label">it has spoken its last words</p>
     <p id="silence-poem-text" class="final-poem-text"></p>
     <p id="silence-poem-date" class="final-poem-date"></p>
+    <div class="rebirth-clock" aria-live="polite">
+      <span id="rebirth-label">WORLD 002 is forming from these remains</span>
+      <strong id="rebirth-countdown">00:12</strong>
+    </div>
+    <a href="/remains#world-archive" class="nav-link silence-archive-link">open the immutable archive &rarr;</a>
   </div>
 
-<script src="/app.js"></script>
+  <div id="birth-veil" class="birth-veil hidden" role="status" aria-live="polite">
+    <p id="birth-predecessor" class="birth-predecessor">WORLD 001 REMAINS CLOSED</p>
+    <p id="birth-edition" class="birth-edition">WORLD 002</p>
+    <p class="birth-action">has been born</p>
+    <p id="birth-lineage" class="birth-lineage">INHERITED SCAR · 00000000</p>
+  </div>
+
+  <canvas id="ash-canvas" class="ash-canvas" aria-hidden="true"></canvas>
+  <div id="sr-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script src="/world.js?v=world-lineage-v6"></script>
+<script src="/app.js?v=world-lineage-v6"></script>
 </body>
 </html>

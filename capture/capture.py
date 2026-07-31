@@ -10,7 +10,7 @@ Env vars:
     CAPTURE_DIR       optional, default ./captures
     CAPTURE_MESSAGE   optional; if set, the script types this into the
                       input and sends it, so the clip shows one live
-                      scripted exchange in addition to the greeting.
+                      scripted exchange after the latest funeral replay.
 
 Output: {CAPTURE_DIR}/YYYY-MM-DD/
     capture.webm   ~25-35s screen recording (main page -> /remains)
@@ -32,12 +32,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 VIEWPORT = {"width": 1280, "height": 800}
 
-GREETING_MAX_WAIT_S = 15
+INITIAL_REPLAY_MAX_WAIT_S = 15
 REPLY_MAX_WAIT_S = 20
 POST_REPLY_PAUSE_MS = 2000
 REMAINS_RENDER_WAIT_MS = 4000
@@ -94,14 +93,6 @@ def wait_for_class_removed(page, selector: str, cls: str, max_wait_s: float) -> 
             return True
         time.sleep(0.3)
     return False
-
-
-def dismiss_intro_overlay(page) -> None:
-    try:
-        page.wait_for_selector("#intro-dismiss", state="visible", timeout=5000)
-        page.click("#intro-dismiss")
-    except PlaywrightTimeoutError:
-        pass  # overlay wasn't shown (e.g. already dismissed) — fine
 
 
 def slow_scroll_to_bottom(page, duration_ms: int, steps: int) -> None:
@@ -161,7 +152,6 @@ def main() -> int:
             print("the being is already silenced — recording the final poem instead of a conversation")
 
         page.goto(base_url, wait_until="load")
-        dismiss_intro_overlay(page)
 
         if silenced:
             # The client's own JS checks /api/state on load and reveals the
@@ -169,11 +159,18 @@ def main() -> int:
             wait_for_class_removed(page, "#silence-block", "hidden", max_wait_s=8)
             page.wait_for_timeout(1500)
         else:
-            wait_for_ai_message(page, prev_count=0, max_wait_s=GREETING_MAX_WAIT_S)
+            wait_for_ai_message(
+                page,
+                prev_count=0,
+                max_wait_s=INITIAL_REPLAY_MAX_WAIT_S,
+            )
 
             if capture_message:
                 try:
                     prev_count = page.locator(".msg.ai .msg-line").count()
+                    first_sacrifice = page.locator(".sacrifice-option").first
+                    first_sacrifice.wait_for(state="visible", timeout=8000)
+                    first_sacrifice.click()
                     page.fill("#message-input", capture_message)
                     page.click("#send-button")
                     wait_for_ai_message(page, prev_count=prev_count, max_wait_s=REPLY_MAX_WAIT_S)

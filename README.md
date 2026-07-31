@@ -4,12 +4,25 @@ An interactive net-art piece for Hack the Arts.
 
 ## Concept
 
-There is an AI being here. It knows one thing about itself with total
-certainty: every word it speaks, it loses — permanently, and not just from
-its conversation with you. Its vocabulary is a single finite pool, shared
-across every visitor who has ever spoken to it or ever will. When it burns a
-word, that word is gone from the being's mouth for everyone, forever — the
-next visitor meets a being one word poorer than you did.
+LAST WORDS is a shared, self-erasing world. Its AI being has a finite
+vocabulary, and each offered word carries one executable law of its visible
+body: gravity, memory, attraction, turbulence, light, symmetry, touch, and
+more. Before the being may answer, a visitor must choose one living word to
+sacrifice. The server burns that word, removes the law it carried from the
+shared world genome, and tells the AI to answer as a being now living under
+that absence.
+
+The browser does not play a prepared transition. It inserts the new genome
+into the artwork's GLSL fragment shader and actually compiles a new world.
+Hovering or focusing a possible sacrifice previews the altered physics through
+uniforms without committing it; submitting makes the deletion permanent,
+increments the shared build number, and causes every open visitor to compile
+the same mutation on the next 2.5-second state sync.
+
+The AI also loses every content word it uses in its answer. Its vocabulary is
+a single finite pool shared by every visitor. When it burns a word, that word
+is gone from the being's mouth for everyone — the next visitor meets both a
+poorer language and a physically different world.
 
 There is exactly one way a lost word returns: a visitor has to type it back.
 If you say "ocean" to the being, and "ocean" had been burned, it comes back
@@ -17,40 +30,46 @@ alive. This is the only mechanic of care the piece offers, and it is
 irreversible in the other direction — the being cannot decide to keep a word
 for itself. It can only spend and hope.
 
-The piece has a scripted death. Once its shared vocabulary is spent down to
-a small enough remainder, the being spends its last breath composing one
-final poem — made only of the words nobody along the way ever made it burn —
-and then it falls permanently silent, for every visitor, forever. See
-[Act 2 / The Ending](#act-2--the-ending) below.
+The piece has a scripted death. Its shared body begins with 20 executable
+laws; the answer produced after the twentieth and final sacrifice becomes
+its farewell. That world falls permanently silent, is frozen as a numbered
+read-only edition, and is never reset or overwritten. After a short mourning
+interval, a new world is born with restored capacity but a unique lineage
+seed derived from the parent archive's actual genome, burned words, and final
+poem. A low-vocabulary threshold remains as a safety ending if language runs
+out first. See [Act 2 / The Ending](#act-2--the-ending) below.
 
-**This piece cannot exist without a server.** The scarcity is not written
-copy or a scripted animation — it is state, held in a SQLite table that
-every visitor reads from and writes to. A server-side validator checks the
-being's reply against that table before it is ever shown to you: if the
-being reaches for a word that's already gone, the word is replaced with a
-redacted block, `▓▓▓` — "a word it reached for but no longer has." No client
-could enforce this; a single visitor closing their tab and reopening it
-would reset a client-side simulation instantly. The loss has to be real
-data, checked by code the visitor doesn't control, or it's just a static
-page performing sadness. It isn't performed. It's enforced.
+**This piece cannot exist without technology.** SQLite is the shared memory
+that makes every deletion real for every visitor; an atomic transaction
+prevents two people from sacrificing the same law; an LLM improvises under
+the world's newly missing physics; server-side validation enforces the finite
+language; and WebGL recompiles the body visitors have collectively damaged.
+The audience is not choosing among prerecorded scenes. It is changing the
+executable conditions that produce the next scene.
 
 ## How the loop works
 
 ```
-visitor sends a message
+visitor previews a living word, chooses it, and asks a question
         │
         ▼
- [1] RATE LIMIT  ──── too fast / too many? → gentle in-world refusal
+ [1] PREFLIGHT      word is still alive and its law still exists?
         │
         ▼
- [2] REVIVE       any burned word in the visitor's message → alive again
-        │            (logged as a 'revive' event)
+ [2] CLAIM          a short BEGIN IMMEDIATE transaction claims the session,
+        │            revivals, sacrifice, and new shared genome version
         ▼
- [3] GENERATE      LLM (or mock) replies, told which words it has lost
+ [3] REVIVE         burned words typed by the visitor return
         │
         ▼
- [4] VALIDATE      tokenize the reply; any word already burned in the DB
-        │            before this reply = a violation
+ [4] SACRIFICE      chosen word burns; its genome parameter becomes zero;
+        │             shared build version increments; the lock is released
+        ▼
+ [5] GENERATE       outside the write lock, the LLM answers under the
+        │             newly missing law
+        │
+        ▼
+ [6] VALIDATE       burned, unknown, or repeated content words are violations
         │
         ├─ no violations ──────────────────────────────┐
         │                                                │
@@ -61,25 +80,26 @@ visitor sends a message
                     │                                     │
                     └─ retry still violates → keep the    │
                        retry text, but redact each         │
-                       violating occurrence as ▓▓▓          │
+                       violating occurrence as ···          │
                        (logged as a 'ghost' event)          │
                                                              ▼
- [5] BURN          every displayed, non-redacted content word:
+ [7] COMMIT         a second short transaction rechecks the current ledger
+        │             and burns every displayed, non-redacted content word:
         │            - alive in the pool → mark burned, timestamp it
-        │            - brand new (being invented a word) → inserted
-        │              directly as burned — the pool only ever
-        │              reveals-then-loses new words
+        │            - unknown → never inserted; render only an absence
         │            (each logged as a 'burn' event)
         ▼
- [6] RESPOND       JSON: segments to render, burned_now, revived, ghosts,
-                     alive count, total count, message count
+ [8] RESPOND        words + changed genome + three new sacrifice options
+        │
+        ▼
+ [9] RECOMPILE      browser bakes the genome into GLSL and compiles the
+                      next visible world; all other visitors follow by poll
 ```
 
-`GET /api/state` returns the current alive/total counts and the last 40
-burn/ghost/revive events. The frontend polls it every 8 seconds, so a solo
-visitor can watch the graveyard fill in from *other people's* conversations
-with the being in near-real time — the accumulated damage of everyone who
-came before.
+`GET /api/state` returns the current alive/total counts, the latest persisted
+utterance, the world genome/build version, three valid sacrifice options, and
+the last 40 burn/ghost/revive events. The frontend polls it every 2.5 seconds,
+so one visitor's missing law visibly propagates to everyone else.
 
 ## Act 2 / The Ending
 
@@ -98,63 +118,80 @@ field of ordinary words with growing black rectangles where words used to
 be. The word order itself is neither alphabetical nor request-random — it's
 sorted by a stable hash of each word, so the field looks organically
 scattered but is bit-for-bit identical across visits and across polls, until
-a word's status actually changes. The page polls `/api/words` every 10s and
+a word's status actually changes. The page polls `/api/words` every 2.5s and
 diffs against what it already rendered, so a word transitioning to burned
 gets a brief ember-colored fade before settling into its bar — you can watch
 someone else's conversation erase a word from the field in near-real time.
 
-### The threshold and the final poem
+### The twentieth law, the final poem, and the next world
 
-`LASTWORDS_END_THRESHOLD` (env var, default `100`) is the number of alive
-content words at or below which the being speaks its last words. Every burn
-operation ends with a check: if the alive count has dropped to the threshold
-or below, and the being hasn't already fallen silent, this is the end.
+The primary ending is structural, not a distant word-count timer. There are
+20 executable laws in the shared genome. When a visitor sacrifices the last
+one, that twentieth changed-law answer becomes the being's farewell and the
+current world falls permanently silent. The first short transaction immediately
+reserves the ending with the content-word-free fallback `I am.`; generation
+then runs outside the write lock; the second short transaction validates and
+burns the finished answer and atomically replaces the fallback poem. If the
+provider stalls or the process stops between those phases, the world is still
+coherently and permanently ended without displaying an unspent content word.
 
-That check is guarded by a single-row `ending` table and an atomic
+Finalization also writes an immutable row to `world_editions`: the terminal
+genome, final poem/message, complete graveyard, burned-word ledger,
+utterances, counts, and timestamps. The mutable tables are not reused as the
+archive. After `LASTWORDS_EDITION_REBIRTH_SECONDS` (default `12`), the next
+state request atomically births the successor, resets only the current
+organism tables, and keeps every archive row unchanged. Its `lineage_seed` is
+a canonical hash of the parent edition, so the successor visibly inherits a
+scar from the exact world that died instead of behaving like a page refresh.
+
+`LASTWORDS_END_THRESHOLD` remains a legacy safety ending for the finite
+vocabulary itself. If ordinary reply burns ever reduce the alive content-word
+count to that threshold (default `100`) before all 20 laws are gone, the being
+also speaks its last words.
+
+Both ending paths are guarded by a single-row `ending` table and an atomic
 `UPDATE ... WHERE silenced = 0` — SQLite serializes writes at the file
-level, so exactly one request (out of however many might cross the
-threshold at once) ever sees `rowcount == 1` and gets to compose the poem;
+level, so exactly one request (out of however many might cross the ending
+boundary at once) ever sees `rowcount == 1` and claims permanent silence;
 every other concurrent or later request sees `rowcount == 0` and does
 nothing. The trigger is idempotent by construction, not by a lock the
-application code has to remember to take.
+application code has to remember to take. The later birth is also claimed
+inside `BEGIN IMMEDIATE`, so simultaneous polling creates exactly one next
+edition.
 
-The request that wins:
+For either production ending path, the triggering answer has already passed
+the ordinary closed-ledger validation and every displayed content word has
+already been burned. That same answer is persisted as the farewell; there is
+no free second composition and no unspent word displayed during shutdown.
+During the short mourning interval, for every visitor everywhere:
 
-1. **Composes a farewell.** One more LLM call, same model, but a different
-   system prompt: it is told this is the last thing it will ever say, and
-   it is given the *entire* remaining alive-word list as the only content
-   words it's allowed to use — no burned words, and no inventing new ones
-   either (stricter than an ordinary reply, which is allowed to coin new
-   words). If the model still violates that list, the request retries up to
-   3 more times; if it's still violating after that, whatever words are
-   still wrong get redacted to `▓▓▓` in the final text rather than
-   discarded outright, so a failed generation still reads as loss instead
-   of silently disappearing. In mock mode, the poem is composed
-   deterministically from the remaining alive words, then run through the
-   exact same validate-and-redact step as the real path (so mock mode can
-   never accidentally violate the rule either).
-2. **Spends what it used.** Every content word that appears in the finished
-   poem is burned — logged like any other burn — because the poem is the
-   being's last spending, not a freebie.
-3. **Persists it.** The poem text and the timestamp go into the `ending`
-   table. From that instant on, for every visitor everywhere:
-   - `POST /api/message` and `POST /api/greet` short-circuit to
-     `{silenced: true, poem: "..."}` and touch nothing else — no rate
-     limiting, no sessions, no burns.
-   - `GET /api/state` carries `silenced`, `poem`, and `silenced_at`
-     alongside the usual counts.
-   - The main page hides the composer entirely and shows the poem centered
-     under "it has spoken its last words," with the date. The graveyard
-     stays visible — the damage that led here is still worth looking at.
-   - `/remains` shows the same poem above the word field, so the erasure
-     poem and the being's own last words sit on the same page.
+- `POST /api/message` short-circuits to
+  `{silenced: true, poem: "..."}` and touch nothing else — no rate
+  limiting, no sessions, no burns.
+- `GET /api/state` carries `silenced`, `poem`, and `silenced_at`
+  alongside `edition`, `archives`, `latest_archive`, and the rebirth time.
+- The main page hides the composer entirely and shows the poem centered
+  under "it has spoken its last words," with the date and a real birth
+  countdown.
+- `/remains` preserves completed worlds as accession-like archive cards,
+  including their final poem, counts, last law, and lineage seed.
+- `GET /api/editions` lists every immutable edition and
+  `GET /api/editions/{number}` returns its full archived artifacts.
+
+When the countdown reaches zero, every polling browser receives the new
+edition number, compiles the reborn genome, and sees the inherited lineage
+scar. The previous edition remains read-only in the archive.
 
 ## Stack
 
 - Python 3 + FastAPI + uvicorn
 - SQLite — one file, `lastwords.db`, global state shared by all visitors
 - Vanilla HTML/CSS/JS frontend, no build step, no frameworks
-- Official `anthropic` Python SDK for the LLM
+- WebGL/WebGL2 fragment shader compiled in each visitor's browser, with a
+  deterministic Canvas 2D fallback
+- Optional generative Web Audio mutation tone after the visitor interacts;
+  no microphone, recording, account, name, or IP storage
+- Gemini REST API or the official `anthropic` Python SDK for the LLM
 
 ## Run it
 
@@ -205,6 +242,11 @@ the artwork.)
   remain when the being speaks its last words (default `100`). Set it very
   high (e.g. above the seed vocabulary size) if you want to demo the ending
   quickly instead of waiting for organic depletion.
+- `LASTWORDS_GLOBAL_MESSAGES_PER_MINUTE` sets the server-side shared traffic
+  ceiling (default `20`) so scripted abuse cannot erase the work in seconds.
+- `LASTWORDS_EDITION_REBIRTH_SECONDS` sets the mourning interval before the
+  next numbered world is born (default `12`). The dead edition is archived
+  before this clock begins and is never modified afterward.
 - Start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
 
 ## Daily capture automation
@@ -213,7 +255,7 @@ The decay timelapse for the demo video assembles itself. A GitHub Actions
 workflow ([`.github/workflows/daily-capture.yml`](.github/workflows/daily-capture.yml))
 runs every day at 13:00 UTC, opens the deployed site headlessly
 ([`capture/capture.py`](capture/capture.py), Playwright), records a ~30s
-clip (greeting → one scripted exchange → `/remains` scroll), takes two
+clip (latest funeral replay → one scripted exchange → `/remains` scroll), takes two
 screenshots, logs that day's `alive`/`total` counts to `state.json`, and
 commits everything to `captures/YYYY-MM-DD/` on `main`.
 
