@@ -11,7 +11,7 @@
   const MAX_VISIBLE_FUNERALS = 10;
   const SESSION_KEY = "lastwords_session_id";
   const EXPLAINER_STORAGE_KEY = "lastwords_explainer_seen_v1";
-  const DEFAULT_SEND_LABEL = "choose a law first";
+  const DEFAULT_SEND_LABEL = "choose one ability first";
 
   const conversationEl = document.getElementById("conversation");
   let waitingLineEl = document.getElementById("waiting-line");
@@ -60,6 +60,10 @@
   const explainButtonEl = document.getElementById("explain-button");
   const closeExplainerEl = document.getElementById("close-explainer");
   const introDismissEl = document.getElementById("intro-dismiss");
+  const jumpToChoicesEl = document.getElementById("jump-to-choices");
+  const jumpToChoicesLabelEl = document.getElementById(
+    "jump-to-choices-label",
+  );
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let currentAlive = null;
@@ -134,7 +138,9 @@
     });
   }
 
-  setExplainerOpen(!explainerWasSeen());
+  // The artwork must be visible on arrival. The optional explanation opens
+  // only when a visitor asks for it.
+  setExplainerOpen(false);
 
   function syncComposerState() {
     const busy =
@@ -171,15 +177,14 @@
         candidate.setAttribute("aria-pressed", String(selected));
     });
     worldEngine?.preview?.(option);
-    const law = String(option.law || option.word).toUpperCase();
     const worldLabel =
       editionLabelEl?.textContent?.trim() ||
       `WORLD ${String(latestEditionNumber || 1).padStart(3, "0")}`;
-    sendButton.textContent = `erase ${law} & ask`;
+    sendButton.textContent = `take ${option.word} & ask`;
     captionEl.textContent =
-      `Choosing “${option.word}” erases ${law} from ${worldLabel} forever—for every visitor.`;
+      `You are about to take “${option.word}” away from ${worldLabel} forever. ${consequence}. Everyone will see the change.`;
     srStatusEl.textContent =
-      `${option.word} selected. It erases ${law}. ${consequence}. Submit to change the shared world.`;
+      `${option.word} selected. ${consequence}. Ask a question to make this loss permanent for everyone.`;
     syncComposerState();
   }
 
@@ -256,7 +261,7 @@
     if (safeOptions.length === 0) {
       const empty = document.createElement("p");
       empty.className = "options-loading";
-      empty.textContent = "no stable law can be offered right now";
+      empty.textContent = "no ability can be offered right now";
       sacrificeOptionsEl.appendChild(empty);
       selectedSacrifice = null;
       syncComposerState();
@@ -271,7 +276,7 @@
       button.setAttribute("aria-pressed", "false");
       button.setAttribute(
         "aria-label",
-        `Choose ${option.word}. Deletes ${option.law}. ${option.consequence}`,
+        `Choose ${option.word}. If removed, ${option.consequence}`,
       );
 
       const word = document.createElement("span");
@@ -279,15 +284,12 @@
       word.textContent = option.word;
       const consequence = document.createElement("span");
       consequence.className = "sacrifice-consequence";
-      consequence.textContent =
-        `deletes ${String(option.law || "this law").toUpperCase()}`;
+      consequence.textContent = "IF YOU TAKE THIS AWAY:";
       const preview = document.createElement("span");
       preview.className = "sacrifice-preview";
-      const previewText =
-        typeof option.preview === "string"
-          ? option.preview.split(";").pop().trim()
-          : String(option.consequence || "preview the loss");
-      preview.textContent = `preview: ${previewText}`;
+      preview.textContent = String(
+        option.consequence || "The creature changes for everyone.",
+      );
       button.append(word, consequence, preview);
 
       button.addEventListener("pointerenter", () => {
@@ -371,13 +373,11 @@
     updateLawCounters(world.genome);
 
     if (world.last_word) {
-      const law = String(world.last_law || world.last_word).toUpperCase();
-      const worldLabel =
-        editionLabelEl?.textContent?.trim() ||
-        `WORLD ${String(latestEditionNumber || 1).padStart(3, "0")}`;
-      mutationTitleEl.textContent = `${law} DELETED FROM ${worldLabel}`;
+      mutationTitleEl.textContent =
+        `${String(world.last_word).toUpperCase()} IS GONE`;
       mutationConsequenceEl.textContent =
-        `${String(world.last_word).toUpperCase()} was the price. ${world.last_consequence || "The body rebuilt around the absence."}`;
+        world.last_consequence ||
+        "The creature changed around what it lost.";
     }
 
     if (changed) {
@@ -386,7 +386,7 @@
       setTimeout(() => document.body.classList.remove("is-mutating"), 900);
       if (remote) {
         srStatusEl.textContent =
-          `Another visitor erased ${world.last_word}. ${world.last_consequence || ""}`;
+          `Another visitor took away ${world.last_word}. ${world.last_consequence || ""}`;
       }
       playMutationTone(world);
     }
@@ -428,6 +428,9 @@
       rebirthClockTimer = null;
     }
     isSilenced = false;
+    if (jumpToChoicesLabelEl) {
+      jumpToChoicesLabelEl.textContent = "choose what it loses";
+    }
     composerEl.classList.remove("silenced");
     silenceBlock.classList.add("hidden");
     silencePoemTextEl.textContent = "";
@@ -441,9 +444,9 @@
     waitingLineEl.id = "waiting-line";
     waitingLineEl.className = "waiting-line";
     waitingLineEl.textContent =
-      `${editionLabel} has no memories yet. Its first absence is yours to choose.`;
+      `${editionLabel} is alive. Choose the first ability it will lose.`;
     conversationEl.appendChild(waitingLineEl);
-    stageLabelEl.textContent = "a new world listens";
+    stageLabelEl.textContent = "the new creature is waiting";
     eventStatusEl.textContent = "";
     lastUtteranceId = null;
     lastFallbackSignature = null;
@@ -1111,6 +1114,9 @@
 
   function applySilencedUI(poem, silencedAt, edition) {
     isSilenced = true;
+    if (jumpToChoicesLabelEl) {
+      jumpToChoicesLabelEl.textContent = "see its last words";
+    }
     syncComposerState();
     composerEl.classList.add("silenced");
     silenceBlock.classList.remove("hidden");
@@ -1401,8 +1407,9 @@
     const text = input.value.trim();
     if (!text || !selectedSacrifice) {
       if (!selectedSacrifice) {
-        captionEl.textContent = "Choose one law below before the world can answer.";
-        srStatusEl.textContent = "Choose one word to sacrifice first.";
+        captionEl.textContent =
+          "Choose one ability below before the creature can answer.";
+        srStatusEl.textContent = "Choose one ability first.";
       }
       return;
     }
@@ -1430,6 +1437,28 @@
 
   introDismissEl?.addEventListener("click", () => {
     closeExplainer({ focusComposer: true });
+  });
+
+  jumpToChoicesEl?.addEventListener("click", () => {
+    if (isSilenced) {
+      silenceBlock?.scrollIntoView({
+        behavior: reduceMotion.matches ? "auto" : "smooth",
+        block: "center",
+      });
+      requestAnimationFrame(() => {
+        silenceBlock?.querySelector("a")?.focus({ preventScroll: true });
+      });
+      return;
+    }
+    composerEl.scrollIntoView({
+      behavior: reduceMotion.matches ? "auto" : "smooth",
+      block: "nearest",
+    });
+    requestAnimationFrame(() => {
+      const firstChoice =
+        sacrificeOptionsEl?.querySelector(".sacrifice-option");
+      (firstChoice || input)?.focus({ preventScroll: true });
+    });
   });
 
   document.addEventListener("keydown", (event) => {

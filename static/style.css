@@ -1410,17 +1410,61 @@ body {
   font-style: normal;
 }
 
+.world-state-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  margin-top: 0.72rem;
+}
+
 .world-header .counter {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0.3rem 0.65rem;
-  margin-top: 0.72rem;
+  margin-top: 0;
   color: var(--text);
   font-size: clamp(1.2rem, 1.85vw, 1.85rem);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
   line-height: 1;
+}
+
+.header-cta {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.1rem;
+  min-height: 44px;
+  padding: 0.35rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--ember);
+  background: transparent;
+  color: rgba(242, 238, 229, 0.9);
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.header-cta-arrow {
+  color: var(--ember);
+  font-size: 0.9rem;
+}
+
+.header-cta-label {
+  color: inherit;
+  font-size: inherit;
+}
+
+.header-cta:hover,
+.header-cta:focus-visible {
+  color: #ff8b68;
+  outline: 1px solid rgba(255, 90, 42, 0.72);
+  outline-offset: 5px;
 }
 
 .counter-divider {
@@ -1441,6 +1485,10 @@ body {
   font-size: 0.5rem;
   letter-spacing: 0.105em;
   text-transform: uppercase;
+}
+
+.technical-detail {
+  display: none;
 }
 
 .world-instruction {
@@ -1668,6 +1716,21 @@ body {
   font-size: 0.45rem;
   letter-spacing: 0.035em;
   line-height: 1.5;
+}
+
+.explainer-technical {
+  margin: 0.5rem 0 0;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(84, 78, 69, 0.38);
+  color: rgba(117, 166, 174, 0.68);
+  font-size: 0.43rem;
+  letter-spacing: 0.025em;
+  line-height: 1.5;
+}
+
+.begin-ritual:focus-visible {
+  outline: 1px solid rgba(255, 90, 42, 0.72);
+  outline-offset: 5px;
 }
 
 .world-canvas {
@@ -1988,8 +2051,8 @@ body {
   appearance: none;
   position: relative;
   min-width: 0;
-  min-height: 58px;
-  padding: 0.45rem 0.65rem 0.2rem;
+  min-height: 76px;
+  padding: 0.48rem 0.65rem 0.35rem;
   border: 0;
   border-top: 1px solid rgba(84, 78, 69, 0.58);
   background: transparent;
@@ -2060,12 +2123,10 @@ body {
 .sacrifice-preview {
   display: block;
   margin-top: 0.32rem;
-  overflow: hidden;
-  color: rgba(164, 157, 145, 0.48);
-  font-size: 0.46rem;
+  color: rgba(214, 208, 196, 0.64);
+  font-size: 0.49rem;
   letter-spacing: 0.03em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .options-loading {
@@ -2134,9 +2195,17 @@ body {
     font-size: clamp(1.05rem, 4.2vw, 1.5rem);
   }
 
+  .world-state-row .counter {
+    margin-top: 0;
+  }
+
   .world-instruction {
     max-width: calc(100vw - 4rem);
     font-size: 0.62rem;
+  }
+
+  .header-cta {
+    font-size: 0.48rem;
   }
 
   .world-remains-link {
@@ -2241,6 +2310,24 @@ body {
     gap: 0.2rem 0.38rem;
     margin-top: 0.48rem;
     font-size: 1.1rem;
+  }
+
+  .world-state-row {
+    align-items: flex-start;
+    gap: 0.35rem 0.8rem;
+    margin-top: 0.5rem;
+  }
+
+  .world-state-row .counter {
+    margin-top: 0;
+  }
+
+  .header-cta {
+    width: fit-content;
+    min-height: 44px;
+    padding-block: 0.2rem;
+    font-size: 0.42rem;
+    letter-spacing: 0.1em;
   }
 
   .counter-label {
@@ -2408,13 +2495,18 @@ body {
   }
 
   .sacrifice-option {
-    min-height: 62px;
+    min-height: 52px;
     padding-inline: 0.35rem;
   }
 
   .sacrifice-word {
     font-size: 0.72rem;
     letter-spacing: 0.12em;
+  }
+
+  .sacrifice-consequence,
+  .sacrifice-preview {
+    display: none;
   }
 
   .silence-block {
