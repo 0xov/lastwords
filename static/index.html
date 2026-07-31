@@ -5,20 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>LAST WORDS — A SELF-ERASING WORLD</title>
 <meta name="description" content="A shared AI artwork whose world loses a law every time a visitor asks it to speak." />
-<link rel="stylesheet" href="/style.css?v=world-lineage-v6" />
+<link rel="stylesheet" href="/style.css?v=world-explained-v7" />
 </head>
 <body class="art-body world-body">
 
   <header class="world-header">
     <div class="world-heading">
       <h1 class="title">LAST WORDS</h1>
-      <div class="counter" aria-label="Shared vocabulary remaining">
-        <span id="alive-count">&mdash;</span>
+      <p class="art-definition">Every question permanently erases<br /><em>one law of this world.</em></p>
+      <p class="world-instruction">The body rebuilds live. Every visitor sees the same wound.</p>
+      <div class="counter" aria-label="Executable laws remaining in this world">
+        <span id="law-alive-count">&mdash;</span>
         <span class="counter-divider">/</span>
-        <span id="total-count">&mdash;</span>
-        <span class="counter-label">words still alive</span>
+        <span id="law-total-count">&mdash;</span>
+        <span class="counter-label">body laws still alive</span>
       </div>
-      <p class="world-instruction">Every living word carries a law. Sacrifice one; its physics disappears for everyone.</p>
+      <p class="word-counter">
+        <span id="alive-count">&mdash;</span> of <span id="total-count">&mdash;</span> words remain in its voice
+      </p>
       <p class="live-proof">
         <span class="live-dot" aria-hidden="true"></span>
         <span id="build-label">BUILD 0000</span>
@@ -30,6 +34,7 @@
       <span class="accession-kicker">current body</span>
       <strong id="edition-label" class="edition-label">WORLD 001</strong>
       <span id="lineage-label" class="lineage-label">ORIGIN · 00000000</span>
+      <button type="button" id="explain-button" class="explain-button" aria-controls="work-explainer" aria-expanded="true">how it works ?</button>
       <a href="/remains#world-archive" id="archive-link" class="nav-link world-remains-link">archive / 0 &rarr;</a>
     </div>
   </header>
@@ -39,6 +44,29 @@
       <h2 id="world-stage-label" class="sr-only">The living world</h2>
       <canvas id="world-canvas" class="world-canvas" aria-hidden="true"></canvas>
       <div id="lineage-scar" class="lineage-scar" aria-hidden="true"></div>
+
+      <section id="work-explainer" class="work-explainer" aria-labelledby="explainer-title">
+        <button type="button" id="close-explainer" class="close-explainer" aria-label="Close explanation">&times;</button>
+        <p class="explainer-kicker">HOW THIS ARTWORK LIVES</p>
+        <h2 id="explainer-title">To speak to it,<br /><em>you must delete part of it.</em></h2>
+        <p class="explainer-thesis">Its body is drawn by 20 live rules in code. Every question sets one rule to zero—permanently, for everyone watching this world.</p>
+        <ol class="explainer-steps">
+          <li>
+            <span class="step-number">01</span>
+            <span><strong>Hover a word</strong><small>Preview the body without its law.</small></span>
+          </li>
+          <li>
+            <span class="step-number">02</span>
+            <span><strong>Delete it + ask</strong><small>The preview becomes a shared wound.</small></span>
+          </li>
+          <li>
+            <span class="step-number">03</span>
+            <span><strong>Watch it rebuild</strong><small>The code and creature change for every visitor.</small></span>
+          </li>
+        </ol>
+        <button type="button" id="intro-dismiss" class="begin-ritual">choose a law <span aria-hidden="true">&darr;</span></button>
+        <p class="explainer-ending">After all 20 laws are gone, this body dies, enters the archive, and a descendant is born from its scar.</p>
+      </section>
 
       <div class="mutation-epitaph" aria-live="polite">
         <p id="mutation-title" class="mutation-title">THE WORLD IS STILL WHOLE</p>
@@ -79,19 +107,19 @@ float attraction = 1.0;</pre>
   <footer class="composer world-ritual" id="composer">
     <form id="message-form" autocomplete="off">
       <fieldset class="sacrifice-fieldset">
-        <legend>Preview a loss. Choose one living word to erase its law for everyone.</legend>
+        <legend><strong>1 — Choose what this world must lose.</strong> Hover to preview.</legend>
         <div id="sacrifice-options" class="sacrifice-options" aria-live="polite">
           <p class="options-loading">reading the laws that remain&hellip;</p>
         </div>
       </fieldset>
 
-      <label class="ritual-question-label" for="message-input">What do you want to know?</label>
+      <label class="ritual-question-label" for="message-input">2 — Ask what remains.</label>
       <div class="question-row">
-        <input id="message-input" type="text" placeholder="ask the world something..." maxlength="300" aria-describedby="composer-caption" />
-        <button type="submit" id="send-button" disabled>sacrifice &amp; ask</button>
+        <input id="message-input" type="text" placeholder="What will you become without it?" maxlength="300" aria-describedby="composer-caption" />
+        <button type="submit" id="send-button" disabled>choose a law first</button>
       </div>
     </form>
-    <p id="composer-caption" class="caption">Your choice changes this same world for every visitor.</p>
+    <p id="composer-caption" class="caption">No reset: the deletion changes this WORLD for every visitor.</p>
   </footer>
 
   <div id="silence-block" class="silence-block hidden">
@@ -116,7 +144,7 @@ float attraction = 1.0;</pre>
   <canvas id="ash-canvas" class="ash-canvas" aria-hidden="true"></canvas>
   <div id="sr-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<script src="/world.js?v=world-lineage-v6"></script>
-<script src="/app.js?v=world-lineage-v6"></script>
+<script src="/world.js?v=world-explained-v7"></script>
+<script src="/app.js?v=world-explained-v7"></script>
 </body>
 </html>

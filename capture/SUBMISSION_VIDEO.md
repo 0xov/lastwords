@@ -26,8 +26,11 @@ The default build:
 - starts an isolated server at `http://127.0.0.1:8791`;
 - removes provider keys from that server so timing is deterministic;
 - makes the twentieth sacrifice through the real browser UI;
-- waits five seconds for WORLD 002;
+- waits eight seconds for WORLD 002;
 - writes `capture/submission_build/LAST_WORDS_60s.mp4`.
+
+The capture requires a mourning interval of at least 7.5 seconds so the same
+recording page can observe WORLD 001 before the real WORLD 002 transition.
 
 To put final public links on the end card:
 
@@ -42,11 +45,14 @@ To use a server that is already running against an isolated database:
 ```bash
 python3 capture/capture_submission.py \
   --base-url http://127.0.0.1:8787 \
-  --db /absolute/path/to/demo.sqlite3
+  --db /absolute/path/to/demo.sqlite3 \
+  --confirm-external-server-mutation
 ```
 
 Never use the live `lastwords.db`: the pipeline intentionally mutates and
 restarts its demo organism. A path named `lastwords.db` is rejected.
+`--base-url` also fails closed unless the explicit mutation confirmation is
+present; the URL and database must point to the same disposable instance.
 
 ## Required UI contract
 

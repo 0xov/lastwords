@@ -8,7 +8,7 @@ text, or staged database response. Editing may crop, zoom, place two real
 browser captures side by side, add captions, and shorten waiting time. Label
 any time compression.
 
-Target: **60.0 seconds, 1920×1080, 30 fps, H.264, readable without sound.**
+Target: **60.0 seconds, 1280×720, 30 fps, H.264, readable without sound.**
 
 ## Before recording
 
@@ -34,7 +34,7 @@ Target: **60.0 seconds, 1920×1080, 30 fps, H.264, readable without sound.**
 | --- | --- | --- | --- |
 | 0:00–0:04 | Full-screen living world in motion. Keep the live counter, `WORLD` number, and `BUILD` visible. | `A WORLD WITH 20 EXECUTABLE LAWS` | “This world is alive because its laws are code.” |
 | 0:04–0:10 | Move the pointer across two offered sacrifice words. Hold on the third so its preview visibly changes the body, then move away once to show the world recover. | `HOVER PREVIEWS A LOSS. NOTHING IS COMMITTED YET.` | “To ask it a question, I have to choose one law to remove.” |
-| 0:10–0:18 | Select a displayed word, enter `What will you become without it?`, and press the real `sacrifice & ask` button. Let the complete impact animation and changed-law epitaph play. | `SACRIFICE: [ACTUAL WORD] → [ACTUAL LAW] = 0` | “The preview is reversible. The sacrifice is not.” |
+| 0:10–0:18 | Select a displayed word, enter `What will you become without it?`, and press the real `erase [LAW] & ask` button. Let the complete impact animation and changed-law epitaph play. | `ERASE: [ACTUAL WORD] → [ACTUAL LAW] = 0` | “The preview is reversible. The deletion is not.” |
 | 0:18–0:26 | Crop toward the source panel while keeping part of the organism visible. Show the changed GLSL constant, incremented build, and `COMPILE PASS`. Do not substitute source text in editing. | `THE BROWSER GENERATED + COMPILED A NEW SHADER` | “This is not a video transition. The browser rewrites and compiles the fragment shader.” |
 | 0:26–0:34 | Place real Window A and Window B side by side. Replay the few seconds spanning the sacrifice. B remains untouched, then inherits the same build and missing physics on poll. | `ONE SQLITE LEDGER → EVERY OPEN BROWSER` and, when needed, `2.5s STATE SYNC` | “A second visitor inherits the same damaged world.” |
 | 0:34–0:42 | Return to A. Show the being's full reply and the newly spent words entering the graveyard; then cut to the live `/remains` field as the matching blackout appears. | `THE REPLY SPENDS ITS OWN FINITE VOCABULARY` | “The being answers under that absence, then spends the words it used.” |
@@ -48,7 +48,7 @@ Target: **60.0 seconds, 1920×1080, 30 fps, H.264, readable without sound.**
 
 - Hold every technical receipt for at least 1.5 seconds.
 - The law value changing to zero, build increment, and `COMPILE PASS` must be
-  readable at 1080p without pausing.
+  readable at 720p without pausing.
 - Keep the organism visible during at least part of the shader proof so judges
   connect code change to sensory change.
 - Use one pointer highlight only if necessary; do not cover the selected word

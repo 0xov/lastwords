@@ -10,7 +10,8 @@
   const MAX_VISIBLE_GRAVES = 10;
   const MAX_VISIBLE_FUNERALS = 10;
   const SESSION_KEY = "lastwords_session_id";
-  const DEFAULT_SEND_LABEL = "sacrifice & ask";
+  const EXPLAINER_STORAGE_KEY = "lastwords_explainer_seen_v1";
+  const DEFAULT_SEND_LABEL = "choose a law first";
 
   const conversationEl = document.getElementById("conversation");
   let waitingLineEl = document.getElementById("waiting-line");
@@ -21,6 +22,8 @@
   const srStatusEl = document.getElementById("sr-status");
   const aliveCountEl = document.getElementById("alive-count");
   const totalCountEl = document.getElementById("total-count");
+  const lawAliveCountEl = document.getElementById("law-alive-count");
+  const lawTotalCountEl = document.getElementById("law-total-count");
   const form = document.getElementById("message-form");
   const input = document.getElementById("message-input");
   const sendButton = document.getElementById("send-button");
@@ -53,9 +56,14 @@
   const birthPredecessorEl = document.getElementById("birth-predecessor");
   const birthEditionEl = document.getElementById("birth-edition");
   const birthLineageEl = document.getElementById("birth-lineage");
+  const workExplainerEl = document.getElementById("work-explainer");
+  const explainButtonEl = document.getElementById("explain-button");
+  const closeExplainerEl = document.getElementById("close-explainer");
+  const introDismissEl = document.getElementById("intro-dismiss");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let currentAlive = null;
+  let currentLawAlive = null;
   let sending = false;
   let ceremonyInFlight = false;
   let isSilenced = false;
@@ -68,6 +76,7 @@
   let lastFallbackSignature = null;
   let stateFetchInFlight = false;
   let selectedSacrifice = null;
+  let renderedSacrificeSignature = null;
   let latestWorldVersion = null;
   let latestEditionNumber = null;
   let rebirthClockTimer = null;
@@ -88,6 +97,44 @@
 
   const sessionId = getSessionId();
   const defaultCaption = captionEl.textContent;
+
+  function setExplainerOpen(open, { remember = false } = {}) {
+    if (!workExplainerEl) return;
+    workExplainerEl.classList.toggle("hidden", !open);
+    workExplainerEl.setAttribute("aria-hidden", String(!open));
+    explainButtonEl?.setAttribute("aria-expanded", String(open));
+    if (remember && !open) {
+      try {
+        localStorage.setItem(EXPLAINER_STORAGE_KEY, "1");
+      } catch (_error) {
+        // Storage is optional; the artwork remains fully usable without it.
+      }
+    }
+  }
+
+  function explainerWasSeen() {
+    try {
+      return localStorage.getItem(EXPLAINER_STORAGE_KEY) === "1";
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function closeExplainer({ focusComposer = false } = {}) {
+    setExplainerOpen(false, { remember: true });
+    if (!focusComposer) return;
+    composerEl.scrollIntoView({
+      behavior: reduceMotion.matches ? "auto" : "smooth",
+      block: "nearest",
+    });
+    requestAnimationFrame(() => {
+      sacrificeOptionsEl?.querySelector(".sacrifice-option")?.focus({
+        preventScroll: true,
+      });
+    });
+  }
+
+  setExplainerOpen(!explainerWasSeen());
 
   function syncComposerState() {
     const busy =
@@ -112,6 +159,7 @@
 
   function selectSacrifice(option, button) {
     unlockWorldAudio();
+    closeExplainer();
     selectedSacrifice = option;
     const consequence = String(option.consequence || "")
       .replace(/[.!?]+$/, "");
@@ -123,11 +171,15 @@
         candidate.setAttribute("aria-pressed", String(selected));
     });
     worldEngine?.preview?.(option);
-    sendButton.textContent = `sacrifice ${option.word} & ask`;
+    const law = String(option.law || option.word).toUpperCase();
+    const worldLabel =
+      editionLabelEl?.textContent?.trim() ||
+      `WORLD ${String(latestEditionNumber || 1).padStart(3, "0")}`;
+    sendButton.textContent = `erase ${law} & ask`;
     captionEl.textContent =
-      `Erase “${option.word}”: ${consequence}. This choice is permanent.`;
+      `Choosing “${option.word}” erases ${law} from ${worldLabel} forever—for every visitor.`;
     srStatusEl.textContent =
-      `${option.word} selected. ${consequence}. Submit to change the shared world.`;
+      `${option.word} selected. It erases ${law}. ${consequence}. Submit to change the shared world.`;
     syncComposerState();
   }
 
@@ -182,6 +234,23 @@
     if (!sacrificeOptionsEl) return;
     const safeOptions = Array.isArray(options) ? options.slice(0, 3) : [];
     const selectedWord = selectedSacrifice?.word;
+    const signature = JSON.stringify(
+      safeOptions.map((option) => [
+        option.word,
+        option.law,
+        option.consequence,
+        option.preview,
+      ]),
+    );
+    if (signature === renderedSacrificeSignature) {
+      if (selectedWord) {
+        selectedSacrifice =
+          safeOptions.find((option) => option.word === selectedWord) || null;
+      }
+      syncComposerState();
+      return;
+    }
+    renderedSacrificeSignature = signature;
     sacrificeOptionsEl.replaceChildren();
 
     if (safeOptions.length === 0) {
@@ -202,7 +271,7 @@
       button.setAttribute("aria-pressed", "false");
       button.setAttribute(
         "aria-label",
-        `Sacrifice ${option.word}: ${option.consequence}`,
+        `Choose ${option.word}. Deletes ${option.law}. ${option.consequence}`,
       );
 
       const word = document.createElement("span");
@@ -210,13 +279,15 @@
       word.textContent = option.word;
       const consequence = document.createElement("span");
       consequence.className = "sacrifice-consequence";
-      consequence.textContent = option.consequence;
+      consequence.textContent =
+        `deletes ${String(option.law || "this law").toUpperCase()}`;
       const preview = document.createElement("span");
       preview.className = "sacrifice-preview";
-      preview.textContent =
+      const previewText =
         typeof option.preview === "string"
-          ? option.preview
-          : `preview ${option.law || "this absence"}`;
+          ? option.preview.split(";").pop().trim()
+          : String(option.consequence || "preview the loss");
+      preview.textContent = `preview: ${previewText}`;
       button.append(word, consequence, preview);
 
       button.addEventListener("pointerenter", () => {
@@ -297,12 +368,16 @@
     const changed =
       latestWorldVersion !== null && version !== latestWorldVersion;
     buildLabelEl.textContent = `BUILD ${String(version).padStart(4, "0")}`;
+    updateLawCounters(world.genome);
 
     if (world.last_word) {
-      mutationTitleEl.textContent =
-        `${String(world.last_word).toUpperCase()} WAS FORGOTTEN`;
+      const law = String(world.last_law || world.last_word).toUpperCase();
+      const worldLabel =
+        editionLabelEl?.textContent?.trim() ||
+        `WORLD ${String(latestEditionNumber || 1).padStart(3, "0")}`;
+      mutationTitleEl.textContent = `${law} DELETED FROM ${worldLabel}`;
       mutationConsequenceEl.textContent =
-        world.last_consequence || "the world rebuilt around the absence";
+        `${String(world.last_word).toUpperCase()} was the price. ${world.last_consequence || "The body rebuilt around the absence."}`;
     }
 
     if (changed) {
@@ -434,6 +509,8 @@
       latestWorldVersion = null;
       selectedSacrifice = null;
       currentAlive = null;
+      currentLawAlive = null;
+      renderedSacrificeSignature = null;
       graveyardEntries = [];
       graveyardFeedEl.replaceChildren();
       graveyardEventEl.textContent = "";
@@ -500,6 +577,22 @@
       setTimeout(() => aliveCountEl.classList.remove("pulse"), 1200);
     }
     currentAlive = alive;
+  }
+
+  function updateLawCounters(genome) {
+    if (!lawAliveCountEl || !lawTotalCountEl || !genome) return;
+    const values = Object.values(genome);
+    const total = values.length;
+    const alive = values.filter(
+      (value) => Math.abs(Number(value) || 0) > 0.001,
+    ).length;
+    animateCountTo(lawAliveCountEl, currentLawAlive, alive);
+    lawTotalCountEl.textContent = total.toLocaleString();
+    if (currentLawAlive !== null && alive < currentLawAlive) {
+      lawAliveCountEl.classList.add("pulse");
+      setTimeout(() => lawAliveCountEl.classList.remove("pulse"), 1200);
+    }
+    currentLawAlive = alive;
   }
 
   // ------------------------------------------------------- funeral particles
@@ -1322,6 +1415,31 @@
     const selected = input.dataset.returningWord;
     if (selected && input.value.trim().toLowerCase() !== selected) {
       clearReturnSelection();
+    }
+  });
+
+  explainButtonEl?.addEventListener("click", () => {
+    setExplainerOpen(true);
+    closeExplainerEl?.focus();
+  });
+
+  closeExplainerEl?.addEventListener("click", () => {
+    closeExplainer();
+    explainButtonEl?.focus();
+  });
+
+  introDismissEl?.addEventListener("click", () => {
+    closeExplainer({ focusComposer: true });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &&
+      workExplainerEl &&
+      !workExplainerEl.classList.contains("hidden")
+    ) {
+      closeExplainer();
+      explainButtonEl?.focus();
     }
   });
 

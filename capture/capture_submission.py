@@ -25,7 +25,8 @@ Use an already-running isolated server:
 
     python3 capture/capture_submission.py \
       --base-url http://127.0.0.1:8787 \
-      --db /absolute/path/to/demo.sqlite3
+      --db /absolute/path/to/demo.sqlite3 \
+      --confirm-external-server-mutation
 
 Never point --db at lastwords.db. The script refuses that production-shaped
 path because it intentionally rewrites the demo world.
@@ -114,6 +115,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--confirm-external-server-mutation",
+        action="store_true",
+        help=(
+            "Required with --base-url. Confirms that the target is an isolated "
+            "disposable server: capture permanently deletes all twenty laws."
+        ),
+    )
+    parser.add_argument(
         "--db",
         type=Path,
         default=None,
@@ -135,7 +144,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--rebirth-seconds",
         type=float,
-        default=5.0,
+        default=8.0,
         help="Mourning interval in the isolated demo world.",
     )
     parser.add_argument(
@@ -354,6 +363,8 @@ def close_and_save_video(
 def create_video_context(
     browser: Browser,
     raw_dir: Path,
+    *,
+    show_intro: bool = False,
 ) -> tuple[BrowserContext, Page]:
     context = browser.new_context(
         viewport=VIEWPORT,
@@ -363,6 +374,14 @@ def create_video_context(
         color_scheme="dark",
         reduced_motion="no-preference",
     )
+    if not show_intro:
+        context.add_init_script(
+            """
+            try {
+              window.localStorage.setItem("lastwords_explainer_seen_v1", "1");
+            } catch (_error) {}
+            """
+        )
     return context, context.new_page()
 
 
@@ -411,8 +430,14 @@ def record_intro(
     base_url: str,
     raw_dir: Path,
 ) -> Path:
-    context, page = create_video_context(browser, raw_dir)
+    context, page = create_video_context(browser, raw_dir, show_intro=True)
     wait_for_art(page, base_url)
+    explainer = page.locator("#work-explainer")
+    if explainer.is_visible():
+        page.wait_for_timeout(1_600)
+        page.locator("#intro-dismiss").click()
+        explainer.wait_for(state="hidden", timeout=5_000)
+        page.wait_for_timeout(350)
     option = choose_visual_option(page)
     option.hover()
     page.wait_for_timeout(2_200)
@@ -595,6 +620,8 @@ def record_archive_and_rebirth(
     browser: Browser,
     base_url: str,
     raw_dir: Path,
+    *,
+    timeout_seconds: float,
 ) -> Path:
     context, page = create_video_context(browser, raw_dir)
     page.goto(f"{base_url}/remains", wait_until="domcontentloaded", timeout=30_000)
@@ -607,23 +634,29 @@ def record_archive_and_rebirth(
         raise RuntimeError(
             "the archive UI is not ready: /remains must visibly render WORLD 001"
         ) from exc
-    page.wait_for_timeout(3_100)
+    page.wait_for_timeout(1_350)
 
     page.goto(base_url, wait_until="domcontentloaded", timeout=30_000)
     try:
         page.wait_for_function(
             "() => document.body.innerText.includes('WORLD 002')",
-            timeout=15_000,
+            timeout=max(15_000, int(timeout_seconds * 1_000)),
         )
     except PlaywrightTimeout as exc:
         raise RuntimeError(
             "the rebirth UI is not ready: the main page must visibly render WORLD 002"
         ) from exc
+    try:
+        page.locator("#birth-veil").wait_for(state="visible", timeout=8_000)
+    except PlaywrightTimeout as exc:
+        raise RuntimeError(
+            "WORLD 002 loaded without the real WORLD 001 → WORLD 002 birth transition"
+        ) from exc
     page.locator(".sacrifice-option").first.wait_for(
         state="visible",
         timeout=15_000,
     )
-    page.wait_for_timeout(3_200)
+    page.wait_for_timeout(2_100)
     destination = raw_dir / "archive-rebirth.webm"
     close_and_save_video(context, page, destination)
     return destination
@@ -799,6 +832,7 @@ def make_caption_overlay(
     detail: str,
     *,
     split_labels: bool = False,
+    show_lower_third: bool = True,
 ) -> None:
     image = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image, "RGBA")
@@ -828,25 +862,26 @@ def make_caption_overlay(
             font=font(16, bold=True),
             fill=(239, 235, 221, 255),
         )
-    draw.rectangle((0, 564, WIDTH, HEIGHT), fill=(7, 8, 8, 226))
-    draw.rectangle((0, 564, 7, HEIGHT), fill=(191, 42, 38, 255))
-    draw.text(
-        (38, 586),
-        headline,
-        font=font(27, bold=True),
-        fill=(239, 235, 221, 255),
-    )
-    detail_font = font(17)
-    lines = wrap_by_width(draw, detail, detail_font, WIDTH - 80)[:2]
-    y = 630
-    for line in lines:
+    if show_lower_third:
+        draw.rectangle((0, 564, WIDTH, HEIGHT), fill=(7, 8, 8, 255))
+        draw.rectangle((0, 564, 7, HEIGHT), fill=(191, 42, 38, 255))
         draw.text(
-            (39, y),
-            line,
-            font=detail_font,
-            fill=(190, 186, 173, 255),
+            (38, 586),
+            headline,
+            font=font(27, bold=True),
+            fill=(239, 235, 221, 255),
         )
-        y += 27
+        detail_font = font(17)
+        lines = wrap_by_width(draw, detail, detail_font, WIDTH - 80)[:2]
+        y = 630
+        for line in lines:
+            draw.text(
+                (39, y),
+                line,
+                font=detail_font,
+                fill=(190, 186, 173, 255),
+            )
+            y += 27
     image.save(path)
 
 
@@ -863,11 +898,13 @@ def build_cards(cards_dir: Path, live_url: str, repo_url: str) -> dict[str, Path
             "EVERY LIVING WORD CARRIES A LAW.",
             "Hovering previews the loss. Nothing changes until a visitor chooses.",
             False,
+            False,
         ),
         "mutation": (
-            "02 / THE SACRIFICE",
+            "02 / THE DELETION",
             "THE AUDIENCE CHANGES THE NEXT SCENE.",
             "A real message deletes one law, changes the shared genome, and forces a live rebuild.",
+            False,
             False,
         ),
         "code": (
@@ -875,11 +912,13 @@ def build_cards(cards_dir: Path, live_url: str, repo_url: str) -> dict[str, Path
             "THE CHOSEN LAW DISAPPEARS FROM ACTUAL GLSL.",
             "The shader source changes and recompiles in the browser. The receipt is part of the artwork.",
             False,
+            True,
         ),
         "sync": (
             "04 / ONE SHARED ORGANISM",
             "A SECOND VISITOR RECEIVES THE SAME WOUND.",
             "Two independent browser sessions converge on the same build without replaying a fake animation.",
+            True,
             True,
         ),
         "death": (
@@ -887,16 +926,18 @@ def build_cards(cards_dir: Path, live_url: str, repo_url: str) -> dict[str, Path
             "THE WORLD USES ITS FINAL LAW TO SAY GOODBYE.",
             "The last sacrifice ends WORLD 001. Its final message and every wound become immutable remains.",
             False,
+            False,
         ),
         "archive": (
             "06 / DEATH WITHOUT RESET",
             "WORLD 001 STAYS DEAD. WORLD 002 IS BORN.",
             "A new organism begins, while the previous world's genome, graveyard, and last words remain public.",
             False,
+            True,
         ),
     }
     result = {"title": title, "end": ending}
-    for slug, (label, headline, detail, split) in captions.items():
+    for slug, (label, headline, detail, split, show_lower_third) in captions.items():
         target = cards_dir / f"caption-{slug}.png"
         make_caption_overlay(
             target,
@@ -904,6 +945,7 @@ def build_cards(cards_dir: Path, live_url: str, repo_url: str) -> dict[str, Path
             headline,
             detail,
             split_labels=split,
+            show_lower_third=show_lower_third,
         )
         result[slug] = target
     return result
@@ -1301,6 +1343,18 @@ def main() -> int:
     output = normalize_path(args.output)
     db_path = normalize_path(args.db or (work_dir / "demo.sqlite3"))
     guard_demo_db(db_path)
+    if args.rebirth_seconds < 7.5:
+        raise RuntimeError(
+            "--rebirth-seconds must be at least 7.5 so the recording page can "
+            "observe WORLD 001 before the real WORLD 002 birth transition."
+        )
+    if args.base_url and not args.confirm_external_server_mutation:
+        raise RuntimeError(
+            "--base-url targets an already-running server and capture will "
+            "permanently delete all twenty laws. Omit --base-url to start the "
+            "safe isolated server, or pass --confirm-external-server-mutation "
+            "only after verifying that target is disposable."
+        )
 
     for directory in (
         work_dir,
@@ -1387,13 +1441,18 @@ def main() -> int:
                 )
                 state_snapshot(base_url, snapshots_dir, "05-world-001-dead")
 
+                record_archive_and_rebirth(
+                    browser,
+                    base_url,
+                    raw_dir,
+                    timeout_seconds=max(20.0, args.rebirth_seconds + 15.0),
+                )
                 world_002 = wait_for_edition(
                     base_url,
                     2,
                     timeout=max(20.0, args.rebirth_seconds + 15.0),
                 )
                 write_json(snapshots_dir / "06-world-002-born.json", world_002)
-                record_archive_and_rebirth(browser, base_url, raw_dir)
             finally:
                 browser.close()
 

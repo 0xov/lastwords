@@ -97,7 +97,8 @@ body {
   letter-spacing: 0.08em;
 }
 
-#alive-count.pulse {
+#alive-count.pulse,
+#law-alive-count.pulse {
   color: var(--ember);
   text-shadow: 0 0 22px rgba(255, 90, 42, 0.4);
   transition: color 1.2s ease, text-shadow 1.2s ease;
@@ -1348,12 +1349,35 @@ body {
   letter-spacing: 0.12em;
 }
 
+.explain-button {
+  appearance: none;
+  margin-top: 0.62rem;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 90, 42, 0.52);
+  background: transparent;
+  color: rgba(242, 238, 229, 0.72);
+  font-family: var(--mono);
+  font-size: 0.48rem;
+  letter-spacing: 0.15em;
+  line-height: 1.8;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.explain-button:hover,
+.explain-button:focus-visible {
+  border-bottom-color: var(--ember);
+  color: var(--text);
+  outline: none;
+}
+
 .world-heading {
   min-width: 0;
 }
 
 .world-header .title {
-  margin: 0 0 1rem;
+  margin: 0 0 0.72rem;
   color: rgba(242, 238, 229, 0.82);
   font-size: 0.76rem;
   font-weight: 500;
@@ -1370,13 +1394,30 @@ body {
   opacity: 0.86;
 }
 
+.art-definition {
+  margin: 0;
+  color: rgba(242, 238, 229, 0.94);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  font-size: clamp(1.05rem, 1.75vw, 1.65rem);
+  font-weight: 400;
+  letter-spacing: 0.035em;
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+
+.art-definition em {
+  color: #ff8b68;
+  font-style: normal;
+}
+
 .world-header .counter {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0.3rem 0.65rem;
+  margin-top: 0.72rem;
   color: var(--text);
-  font-size: clamp(1.45rem, 2.5vw, 2.55rem);
+  font-size: clamp(1.2rem, 1.85vw, 1.85rem);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
   line-height: 1;
@@ -1394,10 +1435,18 @@ body {
   letter-spacing: 0.08em;
 }
 
+.word-counter {
+  margin: 0.38rem 0 0;
+  color: rgba(164, 157, 145, 0.58);
+  font-size: 0.5rem;
+  letter-spacing: 0.105em;
+  text-transform: uppercase;
+}
+
 .world-instruction {
-  margin: 0.72rem 0 0;
+  margin: 0.48rem 0 0;
   color: var(--text-dim);
-  font-size: clamp(0.68rem, 1vw, 0.85rem);
+  font-size: clamp(0.62rem, 0.86vw, 0.76rem);
   letter-spacing: 0.035em;
 }
 
@@ -1444,6 +1493,181 @@ body {
   min-height: 0;
   overflow: hidden;
   isolation: isolate;
+}
+
+.work-explainer {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: clamp(1.25rem, 3.4vw, 3.2rem);
+  width: min(555px, calc(100% - 315px));
+  max-height: calc(100% - 1.6rem);
+  padding: clamp(1rem, 2.5vh, 1.55rem) clamp(1rem, 2.3vw, 1.65rem);
+  overflow-y: auto;
+  border: 1px solid rgba(194, 185, 169, 0.22);
+  border-left-color: rgba(255, 90, 42, 0.62);
+  background:
+    linear-gradient(105deg, rgba(11, 10, 9, 0.97) 0 72%, rgba(11, 10, 9, 0.88)),
+    url("/lastwords-grain.png") center / cover;
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.58),
+    inset 16px 0 28px rgba(255, 90, 42, 0.025);
+  transform: translateY(-50%);
+  scrollbar-width: thin;
+}
+
+.work-explainer::before {
+  content: "";
+  position: absolute;
+  top: 0.8rem;
+  bottom: 0.8rem;
+  left: -1px;
+  width: 1px;
+  background: linear-gradient(
+    transparent,
+    rgba(255, 90, 42, 0.98) 24%,
+    rgba(117, 166, 174, 0.72) 76%,
+    transparent
+  );
+  box-shadow: 0 0 18px rgba(255, 90, 42, 0.4);
+}
+
+.close-explainer {
+  appearance: none;
+  position: absolute;
+  top: 0.65rem;
+  right: 0.72rem;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: rgba(164, 157, 145, 0.72);
+  font: 300 1.25rem/1 var(--mono);
+  cursor: pointer;
+}
+
+.close-explainer:hover,
+.close-explainer:focus-visible {
+  color: var(--text);
+  outline: 1px solid rgba(255, 90, 42, 0.5);
+}
+
+.explainer-kicker {
+  margin: 0 2.2rem 0.65rem 0;
+  color: var(--ember);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+}
+
+.work-explainer h2 {
+  margin: 0;
+  color: rgba(242, 238, 229, 0.95);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  font-size: clamp(1.65rem, 3vw, 2.8rem);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+}
+
+.work-explainer h2 em {
+  color: #ff8b68;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.explainer-thesis {
+  max-width: 49rem;
+  margin: clamp(0.75rem, 1.8vh, 1rem) 0 0;
+  color: rgba(214, 208, 196, 0.82);
+  font-size: clamp(0.62rem, 0.82vw, 0.74rem);
+  letter-spacing: 0.025em;
+  line-height: 1.58;
+}
+
+.explainer-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: clamp(0.8rem, 2vh, 1.15rem) 0 0;
+  padding: 0;
+  border-top: 1px solid rgba(84, 78, 69, 0.55);
+  border-bottom: 1px solid rgba(84, 78, 69, 0.55);
+  list-style: none;
+}
+
+.explainer-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.72rem 0.65rem 0.72rem 0;
+}
+
+.explainer-steps li + li {
+  padding-left: 0.65rem;
+  border-left: 1px solid rgba(84, 78, 69, 0.44);
+}
+
+.step-number {
+  color: var(--ember);
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+}
+
+.explainer-steps strong,
+.explainer-steps small {
+  display: block;
+}
+
+.explainer-steps strong {
+  color: rgba(242, 238, 229, 0.86);
+  font-size: 0.54rem;
+  font-weight: 500;
+  letter-spacing: 0.075em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.explainer-steps small {
+  margin-top: 0.3rem;
+  color: rgba(164, 157, 145, 0.68);
+  font-size: 0.47rem;
+  line-height: 1.45;
+}
+
+.begin-ritual {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  min-width: 178px;
+  margin-top: clamp(0.8rem, 1.8vh, 1.05rem);
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--ember);
+  background: transparent;
+  color: rgba(242, 238, 229, 0.94);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.begin-ritual:hover,
+.begin-ritual:focus-visible {
+  color: #ff8b68;
+  outline: none;
+  text-shadow: 0 0 14px rgba(255, 90, 42, 0.32);
+}
+
+.explainer-ending {
+  margin: 0.65rem 0 0;
+  color: rgba(164, 157, 145, 0.48);
+  font-size: 0.45rem;
+  letter-spacing: 0.035em;
+  line-height: 1.5;
 }
 
 .world-canvas {
@@ -1901,8 +2125,13 @@ body {
     font-size: 0.62rem;
   }
 
+  .art-definition {
+    font-size: clamp(0.92rem, 3.1vw, 1.3rem);
+  }
+
   .world-header .counter {
-    font-size: clamp(1.2rem, 5vw, 1.7rem);
+    margin-top: 0.55rem;
+    font-size: clamp(1.05rem, 4.2vw, 1.5rem);
   }
 
   .world-instruction {
@@ -1916,6 +2145,13 @@ body {
 
   .world-stage {
     min-height: 48dvh;
+  }
+
+  .work-explainer {
+    left: 1rem;
+    width: min(540px, calc(100% - 205px));
+    max-height: calc(100% - 1.1rem);
+    padding: 1rem 1.1rem;
   }
 
   .source-trace {
@@ -2003,6 +2239,7 @@ body {
 
   .world-header .counter {
     gap: 0.2rem 0.38rem;
+    margin-top: 0.48rem;
     font-size: 1.1rem;
   }
 
@@ -2014,11 +2251,29 @@ body {
 
   .world-instruction {
     max-width: calc(100vw - 2rem);
+    margin-top: 0.35rem;
+    font-size: 0.53rem;
     line-height: 1.45;
   }
 
+  .art-definition {
+    font-size: 0.88rem;
+    line-height: 1.08;
+  }
+
+  .word-counter {
+    margin-top: 0.3rem;
+    font-size: 0.4rem;
+  }
+
   .live-proof {
+    margin-top: 0.48rem;
     font-size: 0.45rem;
+  }
+
+  .explain-button {
+    margin-top: 0.5rem;
+    font-size: 0.39rem;
   }
 
   .world-remains-link {
@@ -2029,6 +2284,55 @@ body {
 
   .world-stage {
     min-height: 42dvh;
+  }
+
+  .work-explainer {
+    top: 0.55rem;
+    left: 0.55rem;
+    width: calc(100% - 1.1rem);
+    max-height: calc(100% - 1.1rem);
+    padding: 0.85rem 0.9rem;
+    transform: none;
+  }
+
+  .work-explainer h2 {
+    font-size: clamp(1.45rem, 7.2vw, 2rem);
+  }
+
+  .explainer-thesis {
+    margin-top: 0.65rem;
+    font-size: 0.54rem;
+  }
+
+  .explainer-steps {
+    grid-template-columns: 1fr;
+    margin-top: 0.7rem;
+  }
+
+  .explainer-steps li {
+    grid-template-columns: 24px minmax(0, 1fr);
+    padding: 0.42rem 0;
+  }
+
+  .explainer-steps li + li {
+    padding-left: 0;
+    border-top: 1px solid rgba(84, 78, 69, 0.36);
+    border-left: 0;
+  }
+
+  .explainer-steps small {
+    display: inline;
+    margin: 0 0 0 0.35rem;
+  }
+
+  .begin-ritual {
+    margin-top: 0.65rem;
+    padding-block: 0.55rem;
+  }
+
+  .explainer-ending {
+    margin-top: 0.5rem;
+    font-size: 0.4rem;
   }
 
   .source-trace {
