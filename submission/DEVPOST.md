@@ -5,7 +5,7 @@
 
 ## Submission links
 
-- Live project: [lastwords-0xxz.onrender.com](https://lastwords-0xxz.onrender.com/)
+- Live project: [LAST WORDS](https://lastwords-793366432413.asia-northeast3.run.app/)
 - Public source: [github.com/0xov/lastwords](https://github.com/0xov/lastwords)
 - 60-second demo: [direct MP4](https://raw.githubusercontent.com/0xov/lastwords/main/submission/LAST_WORDS_60S_DEMO.mp4)
 - Hackathon: [Hack the Arts](https://hackthearts.devpost.com/)
@@ -184,7 +184,7 @@ people and the family of worlds that history produces.
 
 ## How to experience it
 
-1. Open [the live project](https://lastwords-0xxz.onrender.com/) in two browser windows.
+1. Open [the live project](https://lastwords-793366432413.asia-northeast3.run.app/) in two browser windows.
 2. In the first window, hover or focus each offered word and watch the world
    preview that law's absence.
 3. Choose one word, ask a question, and submit.
@@ -193,7 +193,7 @@ people and the family of worlds that history produces.
 5. Leave the second window untouched. Within the state-sync interval, it
    should inherit the same build and missing physics.
 6. Open `/remains` to see the shared language ledger.
-7. Open [the immutable world archive](https://lastwords-0xxz.onrender.com/remains#world-archive) to inspect completed numbered worlds.
+7. Open [the immutable world archive](https://lastwords-793366432413.asia-northeast3.run.app/remains#world-archive) to inspect completed numbered worlds.
 
 ## Judging fit
 

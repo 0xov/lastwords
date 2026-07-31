@@ -96,6 +96,6 @@ Target: **60.0 seconds, 1280×720, 30 fps, H.264, readable without sound.**
 > in the browser, propagates to other visitors, and becomes part of an
 > immutable edition. Built for Hack the Arts.
 >
-> Live: https://lastwords-0xxz.onrender.com/<br>
+> Live: https://lastwords-793366432413.asia-northeast3.run.app/<br>
 > Source: https://github.com/0xov/lastwords<br>
 > Attributions: https://github.com/0xov/lastwords/blob/main/ATTRIBUTIONS.md
