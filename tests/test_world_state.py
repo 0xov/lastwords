@@ -1149,6 +1149,72 @@ class WorldStateTests(unittest.TestCase):
         self.assertIsNone(result["world"]["build_ms"])
         self.assertEqual(total_before, total_after)
 
+    def test_get_db_snapshots_only_committed_writes(self):
+        with mock.patch.object(
+            lastwords,
+            "persistence_pending",
+            return_value=False,
+        ), mock.patch.object(lastwords, "backup_database") as backup:
+            with lastwords.get_db() as conn:
+                conn.execute("SELECT 1").fetchone()
+            self.assertEqual(backup.call_count, 0)
+
+            with lastwords.get_db() as conn:
+                conn.execute(
+                    "INSERT INTO events(ts, kind, word) VALUES (?, ?, ?)",
+                    (lastwords.now_iso(), "ghost", "commit"),
+                )
+            self.assertEqual(backup.call_count, 1)
+
+            with lastwords.get_db() as conn:
+                conn.execute(
+                    "INSERT INTO events(ts, kind, word) VALUES (?, ?, ?)",
+                    (lastwords.now_iso(), "ghost", "rollback"),
+                )
+                conn.rollback()
+            self.assertEqual(backup.call_count, 1)
+
+    def test_backup_failure_fails_the_write_request_closed(self):
+        with mock.patch.object(
+            lastwords,
+            "persistence_pending",
+            return_value=False,
+        ), mock.patch.object(
+            lastwords,
+            "backup_database",
+            side_effect=lastwords.PersistenceUnavailable("offline"),
+        ):
+            with self.assertRaises(lastwords.PersistenceUnavailable):
+                with lastwords.get_db() as conn:
+                    conn.execute(
+                        "INSERT INTO events(ts, kind, word) "
+                        "VALUES (?, ?, ?)",
+                        (lastwords.now_iso(), "ghost", "pending"),
+                    )
+
+    def test_startup_finalizes_an_interrupted_last_law_reservation(self):
+        reserved_at = lastwords.now_iso()
+        with lastwords.get_db() as conn:
+            conn.execute(
+                """
+                UPDATE ending
+                SET silenced=1, poem='I am.', silenced_at=?,
+                    finalized_at=NULL, archived_at=NULL
+                WHERE id=1
+                """,
+                (reserved_at,),
+            )
+
+        lastwords.init_db()
+
+        with lastwords.get_db() as conn:
+            ending = lastwords.get_ending(conn)
+            archive = lastwords.get_world_edition(conn, 1)
+        self.assertTrue(ending["silenced"])
+        self.assertEqual(ending["poem"], "I am.")
+        self.assertIsNotNone(ending["finalized_at"])
+        self.assertIsNotNone(archive)
+
 
 if __name__ == "__main__":
     unittest.main()

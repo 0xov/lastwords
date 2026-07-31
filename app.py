@@ -28,6 +28,7 @@ import logging
 import os
 import re
 import sqlite3
+import threading
 import time
 import uuid
 from contextlib import contextmanager
@@ -40,6 +41,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from cloud_persistence import (
+    PersistenceUnavailable,
+    backup_database,
+    persistence_pending,
+    restore_database,
+)
 from seed_words import SEED_WORDS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -48,6 +55,7 @@ log = logging.getLogger("lastwords")
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("LASTWORDS_DB", BASE_DIR / "lastwords.db"))
 STATIC_DIR = BASE_DIR / "static"
+restore_database(DB_PATH)
 
 MAX_MESSAGES_PER_SESSION = 20
 RATE_LIMIT_SECONDS = 3
@@ -314,9 +322,23 @@ def get_db():
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=35000")
     conn.execute("PRAGMA foreign_keys=ON")
+    if persistence_pending():
+        # A prior local commit did not reach durable storage. Do not serve or
+        # mutate from this process until that exact latest state is persisted.
+        backup_database(conn, DB_PATH)
+    initial_changes = conn.total_changes
     try:
         yield conn
+        must_snapshot = (
+            conn.in_transaction
+            and conn.total_changes > initial_changes
+        )
         conn.commit()
+        if must_snapshot:
+            backup_database(conn, DB_PATH)
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -566,6 +588,13 @@ def init_db():
                 """,
                 (legacy_seed, archive["edition_number"]),
             )
+
+        # A process can stop after reserving the final "I am." but before the
+        # provider response returns. On cold start, turn that reservation into
+        # an immutable ending instead of leaving the world frozen forever.
+        ending = get_ending(conn)
+        if ending["silenced"] and not ending["finalized_at"]:
+            finalize_current_ending(conn, ending["poem"] or "I am.")
 
 
 def get_started_at(conn) -> str:
@@ -882,17 +911,33 @@ def claim_global_message_slot(conn, now: float) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# LLM integration (Gemini REST or Anthropic SDK, with deterministic mock
-# fallback). Provider priority: GEMINI_API_KEY > ANTHROPIC_API_KEY > mock.
+# LLM integration (Gemini API, Vertex AI, or Anthropic SDK, with deterministic
+# mock fallback). Provider priority:
+# GEMINI_API_KEY > GOOGLE_CLOUD_PROJECT > ANTHROPIC_API_KEY > mock.
 # ---------------------------------------------------------------------------
 MODEL_ID = "claude-sonnet-5"
 GEMINI_MODEL = os.environ.get("LASTWORDS_MODEL", "gemini-2.5-flash")
+VERTEX_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
+VERTEX_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global").strip()
+USE_VERTEX = os.environ.get(
+    "GOOGLE_GENAI_USE_VERTEXAI",
+    "",
+).strip().lower() in {"1", "true", "yes"}
 
 LLM_PROVIDER = "mock"
 _client = None
+_vertex_credentials = None
+_vertex_token_lock = threading.Lock()
 if os.environ.get("GEMINI_API_KEY"):
     LLM_PROVIDER = "gemini"
     log.info("LLM mode: GEMINI (model=%s)", GEMINI_MODEL)
+elif USE_VERTEX and VERTEX_PROJECT:
+    LLM_PROVIDER = "vertex"
+    log.info(
+        "LLM mode: VERTEX (model=%s, location=%s)",
+        GEMINI_MODEL,
+        VERTEX_LOCATION,
+    )
 elif os.environ.get("ANTHROPIC_API_KEY"):
     try:
         import anthropic
@@ -945,12 +990,75 @@ def _gemini_complete(system_prompt: str, user_text: str) -> Optional[str]:
     return "".join(texts) or None
 
 
+def _vertex_access_token() -> str:
+    """Return a short-lived ADC token without storing an API key."""
+    global _vertex_credentials
+
+    from google.auth import default
+    from google.auth.transport.requests import Request as GoogleAuthRequest
+
+    with _vertex_token_lock:
+        if _vertex_credentials is None:
+            _vertex_credentials, _ = default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+        if not _vertex_credentials.valid:
+            _vertex_credentials.refresh(GoogleAuthRequest())
+        return _vertex_credentials.token
+
+
+def _vertex_complete(system_prompt: str, user_text: str) -> Optional[str]:
+    import urllib.parse
+    import urllib.request
+
+    project = urllib.parse.quote(VERTEX_PROJECT, safe="")
+    location = urllib.parse.quote(VERTEX_LOCATION, safe="")
+    model = urllib.parse.quote(GEMINI_MODEL, safe="")
+    endpoint = (
+        "https://aiplatform.googleapis.com"
+        if VERTEX_LOCATION == "global"
+        else f"https://{VERTEX_LOCATION}-aiplatform.googleapis.com"
+    )
+    url = (
+        f"{endpoint}/v1/projects/{project}/locations/{location}/"
+        f"publishers/google/models/{model}:generateContent"
+    )
+    generation_config: dict = {"maxOutputTokens": 1024}
+    if "flash" in GEMINI_MODEL:
+        generation_config["thinkingConfig"] = {"thinkingBudget": 0}
+    body = json.dumps(
+        {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+            "generationConfig": generation_config,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {_vertex_access_token()}",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.load(resp)
+    candidates = data.get("candidates") or []
+    if not candidates:
+        return None
+    parts = (candidates[0].get("content") or {}).get("parts") or []
+    texts = [p.get("text", "") for p in parts if p.get("text")]
+    return "".join(texts) or None
+
+
 def llm_complete(system_prompt: str, user_text: str) -> Optional[str]:
     """One completion from whichever real provider is configured.
     Returns None on any failure (or in mock mode) so callers fall back."""
     try:
         if LLM_PROVIDER == "gemini":
             return _gemini_complete(system_prompt, user_text)
+        if LLM_PROVIDER == "vertex":
+            return _vertex_complete(system_prompt, user_text)
         if LLM_PROVIDER == "anthropic" and _client is not None:
             response = _client.messages.create(
                 model=MODEL_ID,
@@ -2052,6 +2160,22 @@ def edition_context(conn, archive_limit: int = 6) -> dict:
 init_db()
 
 app = FastAPI(title="LAST WORDS — A SELF-ERASING WORLD")
+
+
+@app.exception_handler(PersistenceUnavailable)
+async def persistence_unavailable_handler(
+    _request: Request,
+    _error: PersistenceUnavailable,
+):
+    return JSONResponse(
+        {
+            "code": "persistence_unavailable",
+            "detail": "The shared world is preserving its latest change. "
+            "Please try again.",
+        },
+        status_code=503,
+        headers={"Retry-After": "5"},
+    )
 
 
 class MessageIn(BaseModel):

@@ -1,0 +1,13 @@
+.git
+.github
+.env
+.venv
+__pycache__
+*.pyc
+lastwords.db*
+capture
+captures
+design
+design-qa.md
+submission
+tests
